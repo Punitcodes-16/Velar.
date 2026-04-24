@@ -1,249 +1,1012 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import bootSound from "./assets/boot.mp3";
-import { useRef } from "react";
-function App() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [active, setActive] = useState(false);
-  const [booting, setBooting] = useState(false);
-  const [isProcessingWake, setIsProcessingWake] = useState(false);
-  const [showMainUI, setShowMainUI] = useState(false);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+
+const backgroundPaths = [
+  "M120 180 L320 180 L420 260 L700 260",
+  "M980 140 L820 140 L760 220 L540 220",
+  "M160 620 L340 620 L420 540 L680 540",
+  "M1040 580 L860 580 L760 500 L520 500",
+  "M260 90 L260 240 L360 320 L360 470",
+  "M920 100 L920 240 L820 330 L820 500",
+  "M60 300 L240 300 L320 360 L520 360",
+  "M1140 300 L940 300 L860 360 L660 360",
+  "M180 720 L320 720 L430 640 L620 640",
+  "M1020 700 L860 700 L760 620 L560 620",
+  "M420 60 L420 180 L500 240 L500 340",
+  "M780 60 L780 180 L700 240 L700 340",
+];
+
+function App() {
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isAwake, setIsAwake] = useState(false);
+  const [isAlert, setIsAlert] = useState(false);
+  const [booting, setBooting] = useState(false);
+  const [showMainUI, setShowMainUI] = useState(false);
+  const [isProcessingWake, setIsProcessingWake] = useState(false);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+
+  const recognitionRef = useRef(null);
+  const audioRef = useRef(null);
+  const bootTimerRef = useRef([]);
+  const voiceEnabledRef = useRef(false);
+
+  const navItems = [
+  { id: "ai-chat", label: "AI Chat" },
+  { id: "knowledge-vault", label: "Knowledge Vault" },
+  { id: "tasks", label: "Tasks" },
+  { id: "uploads", label: "Uploads" },
+  { id: "credits", label: "Credits" },
+];
+
+const scrollToSection = (id) => {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+};
+
+  useEffect(() => {
+    voiceEnabledRef.current = voiceEnabled;
+  }, [voiceEnabled]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopBootSound();
+
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+
+      bootTimerRef.current.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.log("Fullscreen error:", error);
     }
   };
 
-  const startListening = () => {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const unlockAudio = async () => {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(bootSound);
+        audioRef.current.volume = 0.45;
+        audioRef.current.preload = "auto";
+      }
 
-  if (!SpeechRecognition) {
-    alert("Speech Recognition not supported in this browser");
+      audioRef.current.muted = true;
+      await audioRef.current.play();
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.muted = false;
+    } catch (error) {
+      console.log("Audio unlock failed:", error);
+    }
+  };
+
+  const playBootSound = () => {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(bootSound);
+        audioRef.current.volume = 0.45;
+        audioRef.current.preload = "auto";
+      }
+
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+
+      const playPromise = audioRef.current.play();
+      if (playPromise) {
+        playPromise.catch((error) => {
+          console.log("Boot sound failed:", error);
+        });
+      }
+    } catch (error) {
+      console.log("Boot sound setup failed:", error);
+    }
+  };
+
+  const stopBootSound = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  const clearBootTimers = () => {
+    bootTimerRef.current.forEach((timer) => clearTimeout(timer));
+    bootTimerRef.current = [];
+  };
+
+  const runWakeSequence = () => {
+    console.log("runWakeSequence fired");
+    if (isProcessingWake || showMainUI) return;
+
+    clearBootTimers();
+
+    setIsProcessingWake(true);
+    setBooting(true);
+    setShowMainUI(false);
+    setIsAlert(true);
+
+    playBootSound();
+
+    const endBootTimer = setTimeout(() => {
+      setBooting(false);
+    }, 2400);
+
+    const showUiTimer = setTimeout(() => {
+      setShowMainUI(true);
+      setIsProcessingWake(false);
+      setIsAlert(false);
+      stopBootSound();
+    }, 3400);
+
+    bootTimerRef.current = [endBootTimer, showUiTimer];
+  };
+
+ const handleTranscript = (rawText) => {
+  const transcript = rawText.toLowerCase().trim();
+  console.log("Heard:", transcript);
+
+  if (
+    !isAwake &&
+    (
+      transcript.includes("jarvis wake up") ||
+      (transcript.includes("jarvis") && transcript.includes("wake up")) ||
+      transcript.includes("wake up")
+    )
+  ) {
+    setIsAwake(true);
     return;
   }
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
-
-  recognition.start();
-
-  recognition.onresult = (event) => {
-    let transcript = "";
-
-    for (let i = 0; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript.toLowerCase() + " ";
+  if (
+    transcript.includes("start the app") ||
+    transcript.includes("initialize the interface")
+  ) {
+    if (!isAwake) {
+      setIsAwake(true);
     }
-
-    transcript = transcript.trim();
-    console.log("You said:", transcript);
-
-    if (
-      !isProcessingWake &&
-      (
-        transcript.includes("jarvis") ||
-        transcript.includes("wake up") ||
-        transcript.includes("wakeup") ||
-        transcript.includes("jarvis wake up")
-      )
-    ) {
-      recognition.stop();
-
-      setIsProcessingWake(true);
-      setBooting(true);
-      setShowMainUI(false);
-      playBootSound();
-
-      setTimeout(() => {
-        setBooting(false);
-        setActive(true);
-        setShowMainUI(true);
-        setIsProcessingWake(false);
-
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-        }
-      }, 4000);
-    }
-  };
-
-  recognition.onerror = (event) => {
-    console.log("Speech error:", event.error);
-    alert("Voice error: " + event.error);
-  };
-};
-const audioRef = useRef(null);
-
-const playBootSound = () => {
-  if (!audioRef.current) {
-    audioRef.current = new Audio(bootSound);
-    audioRef.current.volume = 0.4;
+    runWakeSequence();
+    return;
   }
 
-  audioRef.current.currentTime = 0;
-  audioRef.current.play();
+ if (showMainUI) {
+  if (transcript.includes("open ai chat")) {
+    scrollToSection("ai-chat");
+    return;
+  }
+
+  if (transcript.includes("open knowledge vault")) {
+    scrollToSection("knowledge");
+    return;
+  }
+
+  if (transcript.includes("open tasks")) {
+    scrollToSection("tasks");
+    return;
+  }
+
+  if (transcript.includes("open uploads")) {
+    scrollToSection("uploads");
+    return;
+  }
+
+  if (transcript.includes("open settings")) {
+    scrollToSection("settings");
+    return;
+  }
+
+  if (transcript.includes("show credits")) {
+    scrollToSection("credits");
+    return;
+  }
+}
 };
+
+  const startListening = async () => {
+    await unlockAudio();
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Speech Recognition is not supported in this browser.");
+      return;
+    }
+
+    if (!recognitionRef.current) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+
+        if (voiceEnabledRef.current) {
+          try {
+            recognition.start();
+          } catch (error) {
+            console.log("Recognition restart blocked:", error);
+          }
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.log("Speech error:", event.error);
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          transcript += event.results[i][0].transcript + " ";
+        }
+
+        handleTranscript(transcript);
+      };
+
+      recognitionRef.current = recognition;
+    }
+
+    try {
+      recognitionRef.current.start();
+      setVoiceEnabled(true);
+    } catch (error) {
+      console.log("Recognition start blocked:", error);
+    }
+  };
+
+  const stopListening = () => {
+    setVoiceEnabled(false);
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+  };
+
+  const handleMouseMove = (event) => {
+    const { innerWidth, innerHeight } = window;
+    const x = (event.clientX / innerWidth - 0.5) * 5;
+    const y = (event.clientY / innerHeight - 0.5) * 5;
+    setMousePosition({ x, y });
+
+   
+
+  };
  
+
+
+
+
+   
+
   return (
-    <div className="relative h-screen flex items-center justify-center bg-black overflow-hidden">
-      <button
-  onClick={toggleFullscreen}
-  className="absolute top-4 right-4 z-30 px-3 py-1.5 text-[10px] tracking-[0.2em] text-white/70 border border-white/15 rounded-md hover:border-white/40 hover:text-white transition-all duration-300"
->
-  {isFullscreen ? "EXIT" : "FULLSCREEN"}
-</button>
-{booting && (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: [0, 0.12, 0] }}
-    transition={{ duration: 1.2, delay: 2.4, ease: "easeInOut" }}
-    className="absolute inset-0 z-20 bg-white pointer-events-none"
-  />
-)}
-<AnimatePresence>
-  {!booting && (
-    <motion.div
-      key="mic"
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.5 }}
-      transition={{ duration: 0.5, ease: "easeInOut" }}
-      onClick={startListening}
-      className="relative z-20 flex items-center justify-center cursor-pointer group"
+    <div
+      className="relative h-screen overflow-hidden bg-[#030405] text-white"
+      onMouseMove={handleMouseMove}
     >
-      {/* Glow (hover + active) */}
-      <div
-        className={`
-        absolute w-32 h-32 rounded-full blur-3xl transition-all duration-500
-        ${active ? "bg-white opacity-25 scale-110" : "bg-white opacity-0 group-hover:opacity-15 animate-pulse"}
-        `}
-      />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.015),transparent_24%),linear-gradient(to_bottom,rgba(0,0,0,0.985),rgba(1,3,6,1))]" />
 
-      {/* Breathing background */}
-      <div
-        className={`absolute w-56 h-56 rounded-full blur-2xl
-        transition-all duration-700
-        ${active
-          ? "bg-white opacity-[0.06] scale-110"
-          : "bg-white opacity-[0.02] scale-100 animate-pulse"}
-        `}
-      />
-
-      {/* Mic Button */}
-      <div
-        className={`
-        w-16 h-16 rounded-full flex items-center justify-center
-        border transition-all duration-300
-        ${active
-          ? "border-white shadow-[0_0_30px_6px_rgba(255,255,255,0.35)] scale-105"
-          : "border-gray-700 group-hover:border-white animate-pulse"}
-        `}
+      <svg
+        className="absolute inset-0 z-[1] pointer-events-none"
+        width="100%"
+        height="100%"
+        viewBox="0 0 1200 800"
+        preserveAspectRatio="none"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className={`
-          w-6 h-6 transition-all duration-300
-          ${active ? "text-white" : "text-gray-400 group-hover:text-white"}
-          `}
+        {backgroundPaths.map((path, index) => (
+          <g key={path}>
+            <motion.path
+              d={path}
+              fill="none"
+              stroke="rgba(255,255,255,0.06)"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+              animate={{
+                x: mousePosition.x * (18 + index * 4),
+                y: mousePosition.y * (18 + index * 4),
+              }}
+              transition={{ type: "spring", stiffness: 55, damping: 14 }}
+            />
+
+            <motion.path
+              d={path}
+              fill="none"
+              stroke="rgba(185,225,255,0.7)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              initial={{ pathLength: 0, pathOffset: 0, opacity: 0 }}
+              animate={{
+                x: mousePosition.x * (18 + index * 4),
+                y: mousePosition.y * (18 + index * 4),
+                pathLength: [0, 0.14, 0.14],
+                pathOffset: [0, 0, 0.86],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: 2.4,
+                delay: index * 0.18,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          </g>
+        ))}
+      </svg>
+
+      <motion.div
+        animate={{ x: [0, 12, -8, 0], y: [0, -8, 10, 0] }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute left-[10%] top-[16%] h-56 w-56 rounded-full bg-white/6 blur-3xl"
+      />
+
+      <motion.div
+        animate={{ x: [0, -14, 8, 0], y: [0, 10, -12, 0] }}
+        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute right-[8%] top-[20%] h-72 w-72 rounded-full bg-white/5 blur-3xl"
+      />
+
+      {!showMainUI && (
+  <>
+    <div className="absolute left-4 top-4 z-30 flex items-center gap-3">
+      <button
+        onClick={voiceEnabled ? stopListening : startListening}
+        className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.24em] text-white/75 transition-all duration-300 hover:border-white/40 hover:text-white"
+      >
+        {voiceEnabled ? "VOICE ON" : "ENABLE VOICE"}
+      </button>
+
+      <div className="text-[10px] tracking-[0.24em] text-white/35">
+        {isListening ? "LISTENING" : "STANDBY"}
+      </div>
+    </div>
+
+    <button
+      onClick={toggleFullscreen}
+      className="absolute right-4 top-4 z-30 rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.24em] text-white/75 transition-all duration-300 hover:border-white/40 hover:text-white"
+    >
+      {isFullscreen ? "EXIT" : "FULLSCREEN"}
+    </button>
+  </>
+)}
+
+      {booting && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.16, 0] }}
+          transition={{ duration: 1.05, delay: 2.1, ease: "easeInOut" }}
+          className="absolute inset-0 z-20 bg-white pointer-events-none"
+        />
+      )}
+
+      <AnimatePresence mode="wait">
+        {!showMainUI && (
+          <motion.div
+            key="eyes-screen"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.6 }}
+            className="absolute inset-0 z-10 flex items-center justify-center"
+          >
+            <div className="relative flex items-center justify-center">
+              {booting && (
+                <>
+                  <motion.div
+                    initial={{ scale: 0.7, opacity: 0 }}
+                    animate={{ scale: [0.82, 1.05, 1], opacity: [0, 0.8, 0.35] }}
+                    transition={{ duration: 1.3, ease: "easeOut" }}
+                    className={`absolute h-48 w-48 rounded-full border ${
+                      isAlert ? "border-red-300/30" : "border-cyan-200/20"
+                    }`}
+                  />
+
+                  <motion.div
+                    initial={{ rotate: 0, opacity: 0 }}
+                    animate={{ rotate: 180, opacity: [0, 0.65, 0.2] }}
+                    transition={{ duration: 2.2, ease: "linear" }}
+                    className={`absolute h-64 w-64 rounded-full border ${
+                      isAlert ? "border-red-400/20" : "border-cyan-300/15"
+                    }`}
+                  />
+
+                  <motion.div
+                    initial={{ scale: 0.2, opacity: 0 }}
+                    animate={{ scale: [0.2, 1, 1.15], opacity: [0, 0.45, 0] }}
+                    transition={{ duration: 1.5, delay: 1.2, ease: "easeOut" }}
+                    className={`absolute h-28 w-28 rounded-full blur-2xl ${
+                      isAlert ? "bg-red-400/20" : "bg-cyan-300/20"
+                    }`}
+                  />
+                </>
+              )}
+
+              <motion.div
+                animate={
+                  isAwake
+                    ? { scaleY: 1, opacity: 1 }
+                    : { scaleY: 0.12, opacity: 0.82 }
+                }
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="flex gap-10"
+              >
+                <div
+                  className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${
+                    isAlert
+                      ? "border-red-300/20 bg-red-500/10"
+                      : "border-cyan-200/10 bg-cyan-300/5"
+                  }`}
+                >
+                  <div
+                    className={`absolute inset-[20%] rounded-full blur-md transition-all duration-500 ${
+                      isAlert ? "bg-red-300/25" : "bg-cyan-200/20"
+                    }`}
+                  />
+
+                  {isAwake && (
+                    <motion.div
+                      animate={{
+                        x: [0, 6, -4, 0],
+                        scale: isAlert ? [1, 1.08, 1] : 1,
+                      }}
+                      transition={{
+                        x: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                        scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
+                      }}
+                      className={`relative h-6 w-6 rounded-full transition-all duration-500 ${
+                        isAlert
+                          ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
+                          : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
+                      }`}
+                    />
+                  )}
+                </div>
+
+                <div
+                  className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${
+                    isAlert
+                      ? "border-red-300/20 bg-red-500/10"
+                      : "border-cyan-200/10 bg-cyan-300/5"
+                  }`}
+                >
+                  <div
+                    className={`absolute inset-[20%] rounded-full blur-md transition-all duration-500 ${
+                      isAlert ? "bg-red-300/25" : "bg-cyan-200/20"
+                    }`}
+                  />
+
+                  {isAwake && (
+                    <motion.div
+                      animate={{
+                        x: [0, -6, 4, 0],
+                        scale: isAlert ? [1, 1.08, 1] : 1,
+                      }}
+                      transition={{
+                        x: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                        scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
+                      }}
+                      className={`relative h-6 w-6 rounded-full transition-all duration-500 ${
+                        isAlert
+                          ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
+                          : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
+                      }`}
+                    />
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+<AnimatePresence>
+  {showMainUI && (
+    <motion.div
+      key="main-ui"
+      initial={{ opacity: 0, scale: 0.08, borderRadius: "999px" }}
+      animate={{ opacity: 1, scale: 1, borderRadius: "0px" }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute inset-0 z-20 text-black overflow-hidden"
+      
+    >
+      
+       {/* base background */}
+  <div className="absolute inset-0 bg-[#f6f6f4]" />
+
+  {/* subtle red gradient */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(220,38,38,0.12),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(220,38,38,0.08),transparent_32%)]" />
+
+{/* abstract flowing lines */}
+<div className="absolute inset-0 overflow-hidden opacity-[0.4] pointer-events-none">
+  <motion.svg
+    viewBox="0 0 1440 800"
+    className="absolute w-full h-full"
+    preserveAspectRatio="none"
+  >
+    
+    <motion.path
+      d="M0,200 C300,300 600,100 900,200 C1200,300 1440,150 1440,150"
+      stroke="rgba(220,38,38,0.35)"
+      strokeWidth="1.2"
+      fill="transparent"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: 1 }}
+      transition={{ duration: 3, ease: "easeInOut" }}
+    />
+
+    <motion.path
+      d="M0,400 C400,500 700,300 1000,420 C1200,480 1440,350 1440,350"
+      stroke="rgba(0,0,0,0.15)"
+      strokeWidth="1"
+      fill="transparent"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: 1 }}
+      transition={{ duration: 3.5, ease: "easeInOut", delay: 0.4 }}
+    />
+
+    <motion.path
+      d="M0,600 C300,700 700,500 1000,620 C1300,700 1440,550 1440,550"
+      stroke="rgba(220,38,38,0.25)"
+      strokeWidth="1"
+      fill="transparent"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: 1 }}
+      transition={{ duration: 4, ease: "easeInOut", delay: 0.8 }}
+    />
+  </motion.svg>
+  <motion.div
+  animate={{ x: ["-120%", "120%"] }}
+  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+  className="absolute inset-0 pointer-events-none opacity-[0.08]"
+>
+  <div className="h-full w-[25%] bg-gradient-to-r from-transparent via-red-500 to-transparent blur-2xl" />
+</motion.div>
+</div>
+
+  {/* wrapper for all visible UI */}
+  <div className="relative z-10 h-full w-full">
+      
+      {/* top bar */}
+      <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between border-b border-black/10 bg-white/40 backdrop-blur-md px-10 py-5 backdrop-blur-md">
+        <div className="flex items-center gap-4">
+        <div className="text-xl font-semibold tracking-tight">
+  Velar<span className="text-red-600">.</span>
+</div>
+         
+        </div>
+
+<div className="flex items-center gap-8 text-sm text-black/75">
+  <button
+    onClick={() => scrollToSection("hero")}
+    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-black"
+  >
+    Home
+  </button>
+
+  <button
+    onClick={() => scrollToSection("workflow")}
+    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-black"
+  >
+    Workflow
+  </button>
+
+  <button
+    onClick={() => scrollToSection("use-cases")}
+    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-black"
+  >
+    Use cases
+  </button>
+
+  <button
+    onClick={() => scrollToSection("credits")}
+    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-black"
+  >
+    Credits
+  </button>
+</div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={voiceEnabled ? stopListening : startListening}
+            className="rounded-xl border border-black/10 bg-white px-4 py-2 text-sm text-black/75 transition hover:border-black/30"
+          >
+            {voiceEnabled ? "Voice On" : "Enable Voice"}
+          </button>
+
+          <button
+            onClick={toggleFullscreen}
+            className="rounded-xl border border-red-500 bg-red-500 px-4 py-2 text-sm text-white transition hover:bg-red-600"
+          >
+            {isFullscreen ? "Exit" : "Fullscreen"}
+          </button>
+        </div>
+      </div>
+
+      {/* scrollable page */}
+      <div className="h-full overflow-y-auto pt-24">
+        {/* hero */}
+        <section
+          id="hero"
+          className="mx-auto flex min-h-[78vh] w-full max-w-7xl flex-col items-center justify-center px-10 text-center"
         >
-          <path d="M12 3a3 3 0 00-3 3v6a3 3 0 006 0V6a3 3 0 00-3-3z" />
-          <path d="M19 10v2a7 7 0 01-14 0v-2" />
-          <path d="M12 19v2" />
-        </svg>
+          <div className="mb-6 rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-red-600 shadow-sm">
+            Voice-first AI workspace
+          </div>
+
+          <h1 className="max-w-5xl text-6xl font-medium leading-[1.05] tracking-tight text-black md:text-7xl">
+            Velar, the AI workspace for chat, knowledge, tasks, and intelligent uploads
+          </h1>
+
+          <p className="mt-8 max-w-3xl text-xl leading-8 text-black/65">
+            Built as a premium operating layer for AI workflows. Clean interface,
+            clear modules, voice navigation, and a structure ready for real backend integration.
+          </p>
+
+          <div className="mt-10 flex items-center gap-4">
+            <button
+              onClick={() => scrollToSection("use-cases")}
+              className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+            >
+              Explore modules
+            </button>
+
+            <button
+              onClick={() => scrollToSection("credits")}
+              className="rounded-xl border border-black/10 bg-white px-5 py-3 text-black/80 transition hover:border-black/30"
+            >
+              View credits
+            </button>
+          </div>
+        </section>
+
+<div className="my-12 h-[1px] w-full bg-black/10" />
+
+
+<section
+  id="workflow"
+  className="w-full border-b border-black/10 px-0 py-24"
+>
+  <div className="mx-auto max-w-7xl px-10">
+    <div className="text-sm tracking-[0.22em] text-red-600">
+      • HOW VELAR WORKS
+    </div>
+
+    <h2 className="mt-6 text-6xl font-medium tracking-tight text-black">
+      One Workspace. <span className="text-red-600">Every Step.</span>
+    </h2>
+
+    <p className="mt-6 max-w-3xl text-2xl leading-9 text-black/65">
+      Velar brings everything together in a seamless flow from your thoughts
+      to real-world execution.
+    </p>
+  </div>
+
+  <div className="mx-auto mt-16 max-w-7xl px-10">
+    <div className="rounded-[36px] border border-black/10 bg-[#f8f7f5] p-10 shadow-sm">
+      {/* Top flow line */}
+      <div className="relative mb-12 hidden md:block">
+        <div className="absolute left-[9%] right-[4%] top-1/2 h-[1.5px] -translate-y-1/2 bg-red-300/80" />
+
+        <div className="grid grid-cols-5 gap-8">
+          {[
+            {
+              title: "Interact",
+              desc: "Chat naturally with AI to get answers, ideas, and guidance.",
+              icon: "💬",
+            },
+            {
+              title: "Store",
+              desc: "Important information is saved in your knowledge vault.",
+              icon: "🗂️",
+            },
+            {
+              title: "Organize",
+              desc: "Structure your knowledge and create tasks, notes, and workflows.",
+              icon: "◫",
+            },
+            {
+              title: "Execute",
+              desc: "Turn plans into action with focused tasks and tracking.",
+              icon: "✓",
+            },
+            {
+              title: "Upload",
+              desc: "Add files and documents to bring everything into one place.",
+              icon: "⤴",
+            },
+          ].map((step, index) => (
+            <motion.div
+              key={step.title}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.45, delay: index * 0.08 }}
+              whileHover={{ y: -6 }}
+              className="relative z-10 flex flex-col items-center text-center"
+            >
+              <motion.div
+                whileHover={{ scale: 1.04 }}
+                className="flex h-36 w-36 items-center justify-center rounded-full border border-red-100 bg-white shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+              >
+                <span className="text-5xl text-red-600">{step.icon}</span>
+              </motion.div>
+
+              <div className="mt-10 text-2xl font-medium tracking-tight text-black">
+                <span className="mr-2 text-red-600">{index + 1}.</span>
+                {step.title}
+              </div>
+
+              <p className="mt-5 max-w-[250px] text-lg leading-8 text-black/60">
+                {step.desc}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile / smaller fallback */}
+      <div className="space-y-8 md:hidden">
+        {[
+          {
+            title: "Interact",
+            desc: "Chat naturally with AI to get answers, ideas, and guidance.",
+            icon: "💬",
+          },
+          {
+            title: "Store",
+            desc: "Important information is saved in your knowledge vault.",
+            icon: "🗂️",
+          },
+          {
+            title: "Organize",
+            desc: "Structure your knowledge and create tasks, notes, and workflows.",
+            icon: "◫",
+          },
+          {
+            title: "Execute",
+            desc: "Turn plans into action with focused tasks and tracking.",
+            icon: "✓",
+          },
+          {
+            title: "Upload",
+            desc: "Add files and documents to bring everything into one place.",
+            icon: "⤴",
+          },
+        ].map((step, index) => (
+          <motion.div
+            key={step.title}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.4, delay: index * 0.06 }}
+            className="rounded-3xl border border-black/10 bg-white p-6"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-red-100 bg-[#fffafa] text-2xl text-red-600">
+                {step.icon}
+              </div>
+              <div className="text-2xl font-medium tracking-tight text-black">
+                <span className="mr-2 text-red-600">{index + 1}.</span>
+                {step.title}
+              </div>
+            </div>
+
+            <p className="mt-4 text-lg leading-8 text-black/60">
+              {step.desc}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Bottom continuous flow */}
+      <div className="relative mt-12 hidden md:block">
+        <div className="mx-auto h-[1.5px] w-[82%] bg-red-200" />
+        <div className="mt-6 flex justify-center">
+          <div className="rounded-full border border-red-100 bg-[#fff1ef] px-8 py-3 text-xl text-red-600 shadow-sm">
+            Continuous Flow
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+        {/* use cases / MVPs */}
+       <section
+  id="use-cases"
+  className="mx-auto w-full max-w-7xl px-10 py-24"
+>
+  <h2 className="text-6xl font-medium tracking-tight text-black">
+    Use cases
+  </h2>
+
+  <p className="mt-6 max-w-3xl text-2xl leading-9 text-black/65">
+    Use Velar to interact with AI, store knowledge, manage workflows,
+    and handle uploads through a clean system designed for real product use.
+  </p>
+
+  <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
+    {/* AI Chat */}
+    <motion.div
+      id="ai-chat"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[340px] rounded-[28px] border border-black/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,235,238,0.95))] p-10 shadow-sm transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-black">
+        AI Chat
+      </h3>
+
+      <div className="mt-8 space-y-4 text-lg leading-8 text-black/62">
+        <p>- Talk to Velar using natural language</p>
+        <p>- Ask questions and control workflows</p>
+        <p>- Future-ready for backend AI integration</p>
+      </div>
+
+      <button className="mt-10 text-lg text-red-600 transition hover:text-red-700">
+        Open AI Chat →
+      </button>
+    </motion.div>
+
+    {/* Knowledge Vault */}
+    <motion.div
+      id="knowledge"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, delay: 0.06, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[340px] rounded-[28px] border border-black/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(255,240,243,0.96))] p-10 shadow-sm transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-black">
+        Knowledge Vault
+      </h3>
+
+      <div className="mt-8 space-y-4 text-lg leading-8 text-black/62">
+        <p>- Store notes, context, and documents</p>
+        <p>- Build the base for semantic search</p>
+        <p>- Organize information for grounded AI replies</p>
+      </div>
+
+      <button className="mt-10 text-lg text-red-600 transition hover:text-red-700">
+        Open Knowledge Vault →
+      </button>
+    </motion.div>
+
+    {/* Tasks */}
+    <motion.div
+      id="tasks"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, delay: 0.08, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[340px] rounded-[28px] border border-black/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(255,238,240,0.95))] p-10 shadow-sm transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-black">
+        Tasks
+      </h3>
+
+      <div className="mt-8 space-y-4 text-lg leading-8 text-black/62">
+        <p>- Track actions and execution steps</p>
+        <p>- Structure work into manageable flows</p>
+        <p>- Prepare for future automation workflows</p>
+      </div>
+
+      <button className="mt-10 text-lg text-red-600 transition hover:text-red-700">
+        Open Tasks →
+      </button>
+    </motion.div>
+
+    {/* Uploads */}
+    <motion.div
+      id="uploads"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, delay: 0.12, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[340px] rounded-[28px] border border-black/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(255,236,239,0.95))] p-10 shadow-sm transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-black">
+        Uploads
+      </h3>
+
+      <div className="mt-8 space-y-4 text-lg leading-8 text-black/62">
+        <p>- Bring files into the system clearly</p>
+        <p>- Use uploads as future AI input sources</p>
+        <p>- Build pipelines around user documents</p>
+      </div>
+
+      <button className="mt-10 text-lg text-red-600 transition hover:text-red-700">
+        Open Uploads →
+      </button>
+    </motion.div>
+  </div>
+</section>
+<section
+  id="credits"
+  className="mx-auto w-full max-w-7xl border-t border-black/10 px-10 py-24"
+>
+  <h2 className="text-5xl font-medium tracking-tight text-black">
+    Credits
+  </h2>
+
+  {/* ABOUT */}
+  <p className="mt-8 max-w-3xl text-2xl leading-9 text-black/65">
+    Built by Punit Bhargava. A developer focused on building clean,
+    scalable systems at the intersection of AI and full-stack development.
+    Velar is designed as a structured workspace that goes beyond UI,
+    aiming to evolve into a real-world intelligent system.
+  </p>
+
+  {/* LINKS */}
+  <div className="mt-12 flex flex-col gap-4 text-lg">
+    <a
+      href="https://www.linkedin.com/in/punit-bhargava-487321311/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-black/80 transition hover:text-red-600"
+    >
+      LinkedIn 
+    </a>
+
+    <a
+      href="https://github.com/Punitcodes-16"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-black/80 transition hover:text-red-600"
+    >
+      GitHub 
+    </a>
+  </div>
+
+ 
+</section>
+
+      </div>
       </div>
     </motion.div>
   )}
 </AnimatePresence>
-{booting && (
-  <div className="absolute inset-0 z-10 pointer-events-none">
-    <svg
-      width="100%"
-      height="100%"
-      viewBox="0 0 1200 800"
-      className="absolute inset-0"
-      preserveAspectRatio="none"
-    >
-      {/* Center core */}
-      <motion.circle
-        cx="600"
-        cy="400"
-        r="4"
-        fill="#7dd3fc"
-        initial={{ opacity: 0, scale: 0.2 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.35 }}
-      />
-
-      {[
-  "M600 400 L680 400 L680 260 L1100 260",
-  "M600 400 L520 400 L520 200 L100 200",
-  "M600 400 L600 480 L750 480 L750 780",
-  "M600 400 L600 320 L450 320 L450 40",
-  "M600 400 L700 400 L700 520 L1200 520",
-  "M600 400 L500 400 L500 580 L0 580",
-  "M600 400 L650 400 L650 300 L800 300 L800 0",
-  "M600 400 L550 400 L550 480 L350 480 L350 800",
-  "M600 400 L720 400 L720 360 L1200 360",
-  "M600 400 L480 400 L480 420 L0 420"
-].map((path, index) => (
-        <g key={index}>
-          {/* Base path */}
-          <motion.path
-            d={path}
-            fill="none"
-            stroke="#38bdf8"
-            strokeWidth="2"
-            strokeLinecap="round"
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 0.28 }}
-          transition={{
-  duration: 2.2,
-  delay: index * 0.12,
-  ease: "easeOut"
-}}
-          />
-
-          {/* Traveling light pulse */}
-          <motion.path
-            d={path}
-            fill="none"
-            stroke="#e0f2fe"
-            strokeWidth="3"
-            strokeLinecap="round"
-            initial={{ pathLength: 0, pathOffset: 0, opacity: 0 }}
-            animate={{
-              pathLength: [0, 0.16, 0.16],
-              pathOffset: [0, 0, 0.84],
-              opacity: [0, 0.95, 0]
-            }}
-           transition={{
-  duration: 1.8,
-  delay: 1.2 + index * 0.08,
-  ease: "easeInOut"
-}}
-          />
-        </g>
-      ))}
-    </svg>
-  </div>
-)}
-        </div>
-       
-
-     
+    </div>
   );
 }
 
