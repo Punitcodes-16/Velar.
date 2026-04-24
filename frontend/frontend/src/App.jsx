@@ -36,6 +36,71 @@ function App() {
   const bootTimerRef = useRef([]);
   const voiceEnabledRef = useRef(false);
 const mainScrollRef = useRef(null);
+const [isChatExpanded, setIsChatExpanded] = useState(false);
+
+const [chatInput, setChatInput] = useState("");
+const [chatMessages, setChatMessages] = useState([
+  {
+    role: "assistant",
+    content: "Velar online. How can I help?"
+  }
+]);
+
+const sendMessage = async () => {
+  if (!chatInput.trim() || loadingChat) return;
+
+  const userMessage = {
+    role: "user",
+    content: chatInput
+  };
+
+  setChatMessages(prev => [...prev, userMessage]);
+  setChatInput("");
+  setLoadingChat(true);
+
+  try {
+
+    const res = await fetch(
+      "http://localhost:5000/api/chat",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify({
+          message: userMessage.content
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    setChatMessages(prev => [
+      ...prev,
+      {
+        role:"assistant",
+       content: data.reply || data.error || "No reply received from backend."
+      }
+    ]);
+
+  } catch(err){
+
+    console.error(err);
+
+    setChatMessages(prev => [
+      ...prev,
+      {
+        role:"assistant",
+        content:"Backend connection failed."
+      }
+    ]);
+
+  }
+
+  setLoadingChat(false);
+};
+
+const [loadingChat, setLoadingChat] = useState(false);
 
   const navItems = [
   { id: "ai-chat", label: "AI Chat" },
@@ -449,16 +514,17 @@ const handleTranscript = (rawText) => {
     Voice-First Intelligent Workspace
   </motion.p>
 
-  <motion.div
-    initial={{opacity:0}}
-    animate={{opacity:1}}
-    transition={{delay:.7}}
-    className="mt-12 rounded-full border border-white/10 bg-white/[0.03] px-7 py-3 text-sm tracking-[0.25em] text-white/55 backdrop-blur-md"
-  >
-    {booting
-      ? "INITIALIZING INTERFACE..."
-      : 'SAY "START THE APP"'}
-  </motion.div>
+ <motion.button
+  initial={{ opacity:0 }}
+  animate={{ opacity:1 }}
+  transition={{ delay:.7 }}
+  onClick={runWakeSequence}
+  className="mt-12 rounded-full border border-white/10 bg-white/[0.03] px-7 py-3 text-sm tracking-[0.25em] text-white/55 backdrop-blur-md transition hover:border-red-500/50 hover:text-white"
+>
+  {booting
+    ? "INITIALIZING INTERFACE..."
+    : 'SAY OR CLICK "START THE APP"'}
+</motion.button>
 
   <motion.div
     initial={{opacity:0}}
@@ -888,94 +954,148 @@ const handleTranscript = (rawText) => {
             </div>
           </section>
 
-          {/* use cases / MVPs */}
-          <section
-            id="use-cases"
-            className="mx-auto w-full max-w-7xl px-10 py-24"
-          >
-            <h2 className="text-6xl font-medium tracking-tight text-white">
-              Use cases
-            </h2>
+         {/* use cases / MVPs */}
+<section
+  id="use-cases"
+  className="mx-auto w-full max-w-7xl px-10 py-24"
+>
+  <h2 className="text-6xl font-medium tracking-tight text-white">
+    Use cases
+  </h2>
 
-            <p className="mt-6 max-w-3xl text-2xl leading-9 text-white/60">
-              Use Velar to interact with AI, store knowledge, manage workflows,
-              and handle uploads through a clean system designed for real product use.
-            </p>
+  <p className="mt-6 max-w-3xl text-2xl leading-9 text-white/60">
+    Use Velar to interact with AI, store knowledge, manage workflows,
+    and handle uploads through a clean system designed for real product use.
+  </p>
 
-            <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
-              {[
-                {
-                  id: "ai-chat",
-                  title: "AI Chat",
-                  points: [
-                    "Talk to Velar using natural language",
-                    "Ask questions and control workflows",
-                    "Future-ready for backend AI integration",
-                  ],
-                  cta: "Open AI Chat →",
-                },
-                {
-                  id: "knowledge",
-                  title: "Knowledge Vault",
-                  points: [
-                    "Store notes, context, and documents",
-                    "Build the base for semantic search",
-                    "Organize information for grounded AI replies",
-                  ],
-                  cta: "Open Knowledge Vault →",
-                },
-                {
-                  id: "tasks",
-                  title: "Tasks",
-                  points: [
-                    "Track actions and execution steps",
-                    "Structure work into manageable flows",
-                    "Prepare for future automation workflows",
-                  ],
-                  cta: "Open Tasks →",
-                },
-                {
-                  id: "uploads",
-                  title: "Uploads",
-                  points: [
-                    "Bring files into the system clearly",
-                    "Use uploads as future AI input sources",
-                    "Build pipelines around user documents",
-                  ],
-                  cta: "Open Uploads →",
-                },
-              ].map((card, index) => (
-                <motion.div
-                  key={card.id}
-                  id={card.id}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.25 }}
-                  transition={{
-                    duration: 0.55,
-                    delay: index * 0.06,
-                    ease: "easeOut",
-                  }}
-                  whileHover={{ y: -8, scale: 1.01 }}
-                  className="min-h-[340px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-                >
-                  <h3 className="text-4xl font-medium tracking-tight text-white">
-                    {card.title}
-                  </h3>
+  <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
+    {/* AI CHAT CARD — custom working module */}
+    <motion.div
+  id="ai-chat"
+  initial={{ opacity: 0, y: 40 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true, amount: 0.25 }}
+  transition={{ duration: 0.55, ease: "easeOut" }}
+  whileHover={{ y: -8, scale: 1.01 }}
+  className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+>
+  <div className="flex items-center justify-between">
+    <h3 className="text-4xl font-medium tracking-tight text-white">
+      AI Chat
+    </h3>
 
-                  <div className="mt-8 space-y-4 text-lg leading-8 text-white/60">
-                    {card.points.map((point) => (
-                      <p key={point}>- {point}</p>
-                    ))}
-                  </div>
+    <button
+      onClick={() => setIsChatExpanded(true)}
+      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+    >
+      Expand
+    </button>
+  </div>
 
-                  <button className="mt-10 text-lg text-red-500 transition hover:text-red-400">
-                    {card.cta}
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-          </section>
+  <div className="mt-8 h-72 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-6">
+    {chatMessages.map((msg, index) => (
+      <div
+        key={index}
+        className={`rounded-2xl px-4 py-3 text-sm leading-7 ${
+          msg.role === "user"
+            ? "ml-auto max-w-[80%] bg-red-500 text-white"
+            : "max-w-[85%] bg-white/10 text-white"
+        }`}
+      >
+        {msg.content}
+      </div>
+    ))}
+
+    {loadingChat && (
+      <div className="text-sm text-white/50">
+        Velar thinking...
+      </div>
+    )}
+  </div>
+
+  <div className="mt-6 flex gap-3">
+    <input
+      value={chatInput}
+      onChange={(e) => setChatInput(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") sendMessage();
+      }}
+      placeholder="Ask Velar anything..."
+      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+    />
+
+    <button
+      onClick={sendMessage}
+      className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+    >
+      Send
+    </button>
+  </div>
+</motion.div>
+    {/* OTHER MVP CARDS — easy to edit later */}
+    {[
+      {
+        id: "knowledge",
+        title: "Knowledge Vault",
+        points: [
+          "Store notes, context, and documents",
+          "Build the base for semantic search",
+          "Organize information for grounded AI replies",
+        ],
+        cta: "Open Knowledge Vault →",
+      },
+      {
+        id: "tasks",
+        title: "Tasks",
+        points: [
+          "Track actions and execution steps",
+          "Structure work into manageable flows",
+          "Prepare for future automation workflows",
+        ],
+        cta: "Open Tasks →",
+      },
+      {
+        id: "uploads",
+        title: "Uploads",
+        points: [
+          "Bring files into the system clearly",
+          "Use uploads as future AI input sources",
+          "Build pipelines around user documents",
+        ],
+        cta: "Open Uploads →",
+      },
+    ].map((card, index) => (
+      <motion.div
+        key={card.id}
+        id={card.id}
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{
+          duration: 0.55,
+          delay: (index + 1) * 0.06,
+          ease: "easeOut",
+        }}
+        whileHover={{ y: -8, scale: 1.01 }}
+        className="min-h-[340px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+      >
+        <h3 className="text-4xl font-medium tracking-tight text-white">
+          {card.title}
+        </h3>
+
+        <div className="mt-8 space-y-4 text-lg leading-8 text-white/60">
+          {card.points.map((point) => (
+            <p key={point}>- {point}</p>
+          ))}
+        </div>
+
+        <button className="mt-10 text-lg text-red-500 transition hover:text-red-400">
+          {card.cta}
+        </button>
+      </motion.div>
+    ))}
+  </div>
+</section>
 
           {/* Credits */}
           <section
@@ -1014,7 +1134,84 @@ const handleTranscript = (rawText) => {
             </div>
           </section>
         </div>
+        <AnimatePresence>
+  {isChatExpanded && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-8 backdrop-blur-md"
+    >
+      <motion.div
+        initial={{ scale: 0.92, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.92, y: 30 }}
+        transition={{ duration: 0.3 }}
+        className="flex h-[82vh] w-full max-w-5xl flex-col rounded-[32px] border border-white/10 bg-[#101010]/95 p-8 shadow-[0_30px_100px_rgba(0,0,0,0.45)]"
+      >
+        <div className="flex items-center justify-between border-b border-white/10 pb-5">
+          <div>
+            <h2 className="text-3xl font-medium text-white">
+              AI Chat
+            </h2>
+            <p className="mt-1 text-sm text-white/45">
+              Expanded Velar conversation workspace
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsChatExpanded(false)}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+          >
+            Minimize
+          </button>
+        </div>
+
+        <div className="mt-6 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-6">
+          {chatMessages.map((msg, index) => (
+            <div
+              key={index}
+              className={`rounded-2xl px-5 py-4 text-base leading-8 ${
+                msg.role === "user"
+                  ? "ml-auto max-w-[70%] bg-red-500 text-white"
+                  : "max-w-[75%] bg-white/10 text-white"
+              }`}
+            >
+              {msg.content}
+            </div>
+          ))}
+
+          {loadingChat && (
+            <div className="text-white/50">
+              Velar thinking...
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") sendMessage();
+            }}
+            placeholder="Ask Velar anything..."
+            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white outline-none placeholder:text-white/35"
+          />
+
+          <button
+            onClick={sendMessage}
+            className="rounded-xl bg-red-500 px-6 py-4 text-white transition hover:bg-red-600"
+          >
+            Send
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
       </div>
+      
     </motion.div>
   )}
 </AnimatePresence>

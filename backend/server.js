@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   methods: ["GET", "POST"],
   credentials: true,
 }));
@@ -16,7 +16,12 @@ app.use(cors({
 app.use(express.json());
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: {
+    "HTTP-Referer": "http://localhost:5174",
+    "X-Title": "Velar AI",
+  },
 });
 
 app.get("/", (req, res) => {
@@ -25,24 +30,32 @@ app.get("/", (req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, messages } = req.body;
 
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: "Message is required" });
-    }
+    const finalMessages = [
+      {
+        role: "system",
+        content:
+          "You are Velar, a voice-first intelligent workspace assistant. Be concise, useful, and clear.",
+      },
+      ...(messages?.map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      })) || [{ role: "user", content: message }]),
+    ];
 
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: message,
+    const completion = await client.chat.completions.create({
+      model: "openrouter/free",
+      messages: finalMessages,
     });
 
     res.json({
-      reply: response.output_text,
+      reply: completion.choices?.[0]?.message?.content || "No reply generated.",
     });
   } catch (error) {
-    console.error("Chat error:", error);
+    console.error("OpenRouter chat error:", error);
     res.status(500).json({
-      error: "Something went wrong while generating response",
+      error: error.message || "OpenRouter request failed",
     });
   }
 });
