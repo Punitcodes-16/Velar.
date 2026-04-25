@@ -29,7 +29,13 @@ function App() {
   const [showMainUI, setShowMainUI] = useState(false);
   const [isProcessingWake, setIsProcessingWake] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+const [savedChats, setSavedChats] = useState([]);
+const [chatCounter, setChatCounter] = useState(1);
 
+const [notes, setNotes] = useState([]);
+const [noteTitle, setNoteTitle] = useState("");
+const [noteContent, setNoteContent] = useState("");
+const [notesLoading, setNotesLoading] = useState(false);
 
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
@@ -45,6 +51,37 @@ const [chatMessages, setChatMessages] = useState([
     content: "Velar online. How can I help?"
   }
 ]);
+
+const startNewChat = () => {
+
+  setSavedChats(prev => [
+    ...prev,
+    {
+      id: chatCounter,
+      title: `Chat ${chatCounter}`,
+      messages: chatMessages
+    }
+  ]);
+
+  setChatCounter(prev=>prev+1);
+
+  setChatMessages([
+    {
+      role:"assistant",
+      content:"Velar online. How can I help?"
+    }
+  ]);
+
+  setChatInput("");
+};
+
+const loadSavedChat = (chat) => {
+  setChatMessages(chat.messages);
+};
+
+const deleteSavedChat = (chatId) => {
+  setSavedChats((prev) => prev.filter((chat) => chat.id !== chatId));
+};
 
 const sendMessage = async () => {
   if (!chatInput.trim() || loadingChat) return;
@@ -147,6 +184,10 @@ const scrollToSection = (id) => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);
+
+  useEffect(()=>{
+ fetchNotes();
+},[]);
 
   useEffect(() => {
     return () => {
@@ -381,10 +422,110 @@ const handleTranscript = (rawText) => {
 
   };
  
+const clearChat = () => {
+  setChatMessages([
+    {
+      role: "assistant",
+      content: "Velar online. How can I help?",
+    },
+  ]);
+  setChatInput("");
+};
+
+const fetchNotes = async () => {
+  try {
+
+    setNotesLoading(true);
+
+    const res = await fetch(
+      "http://localhost:5000/api/notes"
+    );
+
+    const data = await res.json();
+
+    setNotes(data.notes || []);
+
+  } catch(err){
+    console.error(err);
+  }
+
+  setNotesLoading(false);
+};
 
 
+const saveNote = async () => {
+  console.log("Save clicked");
 
+  if (!noteTitle.trim() || !noteContent.trim()) {
+    console.log("Missing title or content");
+    return;
+  }
 
+  try {
+    const res = await fetch("http://localhost:5000/api/notes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: noteTitle,
+        content: noteContent,
+      }),
+    });
+
+    const data = await res.json();
+    console.log("Save response:", data);
+
+    if (!res.ok) {
+      console.log("Save failed:", data.error);
+      return;
+    }
+
+    setNoteTitle("");
+    setNoteContent("");
+    fetchNotes();
+  } catch (err) {
+    console.error("Save note error:", err);
+  }
+};
+const deleteNote = async (id) => {
+  try {
+    const res = await fetch(`http://localhost:5000/api/notes/${id}`, {
+      method: "DELETE",
+    });
+
+    const data = await res.json();
+    console.log("Delete response:", data);
+
+    fetchNotes();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const saveChatToVault = async (messageText) => {
+  try {
+
+    await fetch(
+      "http://localhost:5000/api/notes",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          title:"Saved from AI Chat",
+          content:messageText
+        })
+      }
+    );
+
+    fetchNotes();
+
+  } catch(err){
+    console.error(err);
+  }
+};
    
 
   return (
@@ -983,34 +1124,62 @@ const handleTranscript = (rawText) => {
     <h3 className="text-4xl font-medium tracking-tight text-white">
       AI Chat
     </h3>
+<div className="flex gap-3">
 
-    <button
-      onClick={() => setIsChatExpanded(true)}
-      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-    >
-      Expand
-    </button>
+<button
+ onClick={startNewChat}
+ className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+>
+ New Chat
+</button>
+
+<button
+ onClick={clearChat}
+ className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+>
+ Clear
+</button>
+
+<button
+ onClick={() => setIsChatExpanded(true)}
+ className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+>
+ Expand
+</button>
+
+</div>
   </div>
 
   <div className="mt-8 h-72 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-6">
-    {chatMessages.map((msg, index) => (
-      <div
-        key={index}
-        className={`rounded-2xl px-4 py-3 text-sm leading-7 ${
-          msg.role === "user"
-            ? "ml-auto max-w-[80%] bg-red-500 text-white"
-            : "max-w-[85%] bg-white/10 text-white"
-        }`}
-      >
-        {msg.content}
-      </div>
-    ))}
+   {chatMessages.map((msg, index) => (
+  <div
+    key={index}
+    className={`rounded-2xl px-4 py-3 text-sm leading-7 ${
+      msg.role === "user"
+        ? "ml-auto max-w-[80%] bg-red-500 text-white"
+        : "max-w-[85%] bg-white/10 text-white"
+    }`}
+  >
+    <div>
+      {msg.content}
+    </div>
 
-    {loadingChat && (
-      <div className="text-sm text-white/50">
-        Velar thinking...
-      </div>
+    {msg.role === "assistant" && (
+      <button
+        onClick={() => saveChatToVault(msg.content)}
+        className="mt-3 text-xs text-red-300 transition hover:text-red-200"
+      >
+        Save to Vault
+      </button>
     )}
+  </div>
+))}
+
+{loadingChat && (
+  <div className="text-sm text-white/50">
+    Velar thinking...
+  </div>
+)}
   </div>
 
   <div className="mt-6 flex gap-3">
@@ -1033,56 +1202,106 @@ const handleTranscript = (rawText) => {
   </div>
 </motion.div>
     {/* OTHER MVP CARDS — easy to edit later */}
-    {[
-      {
-        id: "knowledge",
-        title: "Knowledge Vault",
-        points: [
-          "Store notes, context, and documents",
-          "Build the base for semantic search",
-          "Organize information for grounded AI replies",
-        ],
-        cta: "Open Knowledge Vault →",
-      },
-      {
-        id: "tasks",
-        title: "Tasks",
-        points: [
-          "Track actions and execution steps",
-          "Structure work into manageable flows",
-          "Prepare for future automation workflows",
-        ],
-        cta: "Open Tasks →",
-      },
-      {
-        id: "uploads",
-        title: "Uploads",
-        points: [
-          "Bring files into the system clearly",
-          "Use uploads as future AI input sources",
-          "Build pipelines around user documents",
-        ],
-        cta: "Open Uploads →",
-      },
-    ].map((card, index) => (
-      <motion.div
-        key={card.id}
-        id={card.id}
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.25 }}
-        transition={{
-          duration: 0.55,
-          delay: (index + 1) * 0.06,
-          ease: "easeOut",
-        }}
-        whileHover={{ y: -8, scale: 1.01 }}
-        className="min-h-[340px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-      >
-        <h3 className="text-4xl font-medium tracking-tight text-white">
-          {card.title}
-        </h3>
+   {[
+  {
+    id: "knowledge",
+    title: "Knowledge Vault",
+    points: [
+      "Store notes, context, and documents",
+      "Build the base for semantic search",
+      "Organize information for grounded AI replies",
+    ],
+    cta: "Open Knowledge Vault →",
+  },
+  {
+    id: "tasks",
+    title: "Tasks",
+    points: [
+      "Track actions and execution steps",
+      "Structure work into manageable flows",
+      "Prepare for future automation workflows",
+    ],
+    cta: "Open Tasks →",
+  },
+  {
+    id: "uploads",
+    title: "Uploads",
+    points: [
+      "Bring files into the system clearly",
+      "Use uploads as future AI input sources",
+      "Build pipelines around user documents",
+    ],
+    cta: "Open Uploads →",
+  },
+].map((card, index) => (
+  <motion.div
+    key={card.id}
+    id={card.id}
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.25 }}
+    transition={{
+      duration: 0.55,
+      delay: (index + 1) * 0.06,
+      ease: "easeOut",
+    }}
+    whileHover={{ y: -8, scale: 1.01 }}
+    className="min-h-[340px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+  >
+    <h3 className="text-4xl font-medium tracking-tight text-white">
+      {card.title}
+    </h3>
 
+    {card.id === "knowledge" ? (
+      <>
+        <div className="mt-8 space-y-4">
+          <input
+            value={noteTitle}
+            onChange={(e) => setNoteTitle(e.target.value)}
+            placeholder="Note title"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+          />
+
+          <textarea
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
+            rows={4}
+            placeholder="Write knowledge note..."
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+          />
+
+          <button
+            onClick={saveNote}
+            className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+          >
+            Save Note
+          </button>
+        </div>
+
+        <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+          {notes.map((note) => (
+            <div
+              key={note.id}
+              className="rounded-2xl border border-white/10 bg-black/20 p-4"
+            >
+              <div className="flex justify-between">
+                <h4 className="text-white">{note.title}</h4>
+
+                <button
+                  onClick={() => deleteNote(note.id)}
+                  className="text-red-400 transition hover:text-red-300"
+                >
+                  Delete
+                </button>
+              </div>
+
+              <p className="mt-3 text-white/60">{note.content}</p>
+            </div>
+          ))}
+        </div>
+      </>
+    ) : (
+      <>
         <div className="mt-8 space-y-4 text-lg leading-8 text-white/60">
           {card.points.map((point) => (
             <p key={point}>- {point}</p>
@@ -1092,9 +1311,11 @@ const handleTranscript = (rawText) => {
         <button className="mt-10 text-lg text-red-500 transition hover:text-red-400">
           {card.cta}
         </button>
-      </motion.div>
-    ))}
-  </div>
+      </>
+    )}
+  </motion.div>
+))}
+</div>
 </section>
 
           {/* Credits */}
@@ -1149,63 +1370,116 @@ const handleTranscript = (rawText) => {
         transition={{ duration: 0.3 }}
         className="flex h-[82vh] w-full max-w-5xl flex-col rounded-[32px] border border-white/10 bg-[#101010]/95 p-8 shadow-[0_30px_100px_rgba(0,0,0,0.45)]"
       >
-        <div className="flex items-center justify-between border-b border-white/10 pb-5">
-          <div>
-            <h2 className="text-3xl font-medium text-white">
-              AI Chat
-            </h2>
-            <p className="mt-1 text-sm text-white/45">
-              Expanded Velar conversation workspace
-            </p>
-          </div>
+        <div className="flex h-full gap-6">
+  {/* SAVED CHATS SIDEBAR */}
+  <aside className="w-64 rounded-2xl border border-white/10 bg-white/5 p-4">
+    <button
+      onClick={startNewChat}
+      className="mb-4 w-full rounded-xl bg-red-500 px-4 py-3 text-sm text-white transition hover:bg-red-600"
+    >
+      + New Chat
+    </button>
 
-          <button
-            onClick={() => setIsChatExpanded(false)}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-          >
-            Minimize
-          </button>
+    <div className="space-y-2">
+      {savedChats.length === 0 ? (
+        <div className="rounded-xl border border-white/10 px-3 py-3 text-sm text-white/40">
+          No saved chats yet
         </div>
+      ) : (
+       savedChats.map((chat) => (
+  <div
+    key={chat.id}
+    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+  >
+    <button
+      onClick={() => loadSavedChat(chat)}
+      className="flex-1 text-left text-sm text-white/70 transition hover:text-white"
+    >
+      {chat.title}
+    </button>
 
-        <div className="mt-6 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-6">
-          {chatMessages.map((msg, index) => (
-            <div
-              key={index}
-              className={`rounded-2xl px-5 py-4 text-base leading-8 ${
-                msg.role === "user"
-                  ? "ml-auto max-w-[70%] bg-red-500 text-white"
-                  : "max-w-[75%] bg-white/10 text-white"
-              }`}
-            >
-              {msg.content}
-            </div>
-          ))}
+    <button
+      onClick={() => deleteSavedChat(chat.id)}
+      className="text-xs text-white/35 transition hover:text-red-400"
+    >
+      ✕
+    </button>
+  </div>
+))
+      )}
+    </div>
+  </aside>
 
-          {loadingChat && (
-            <div className="text-white/50">
-              Velar thinking...
-            </div>
-          )}
+  {/* CHAT AREA */}
+  <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex items-center justify-between border-b border-white/10 pb-5">
+      <div>
+        <h2 className="text-3xl font-medium text-white">
+          AI Chat
+        </h2>
+        <p className="mt-1 text-sm text-white/45">
+          Expanded Velar conversation workspace
+        </p>
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          onClick={clearChat}
+          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+        >
+          Clear
+        </button>
+
+        <button
+          onClick={() => setIsChatExpanded(false)}
+          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+        >
+          Minimize
+        </button>
+      </div>
+    </div>
+
+    <div className="mt-6 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-6">
+      {chatMessages.map((msg, index) => (
+        <div
+          key={index}
+          className={`rounded-2xl px-5 py-4 text-base leading-8 ${
+            msg.role === "user"
+              ? "ml-auto max-w-[70%] bg-red-500 text-white"
+              : "max-w-[75%] bg-white/10 text-white"
+          }`}
+        >
+          {msg.content}
         </div>
+      ))}
 
-        <div className="mt-6 flex gap-3">
-          <input
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
-            }}
-            placeholder="Ask Velar anything..."
-            className="flex-1 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white outline-none placeholder:text-white/35"
-          />
-
-          <button
-            onClick={sendMessage}
-            className="rounded-xl bg-red-500 px-6 py-4 text-white transition hover:bg-red-600"
-          >
-            Send
-          </button>
+      {loadingChat && (
+        <div className="text-white/50">
+          Velar thinking...
         </div>
+      )}
+    </div>
+
+    <div className="mt-6 flex gap-3">
+      <input
+        value={chatInput}
+        onChange={(e) => setChatInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") sendMessage();
+        }}
+        placeholder="Ask Velar anything..."
+        className="flex-1 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white outline-none placeholder:text-white/35"
+      />
+
+      <button
+        onClick={sendMessage}
+        className="rounded-xl bg-red-500 px-6 py-4 text-white transition hover:bg-red-600"
+      >
+        Send
+      </button>
+    </div>
+  </div>
+</div>
       </motion.div>
     </motion.div>
   )}
