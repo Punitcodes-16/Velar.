@@ -21,7 +21,7 @@ const backgroundPaths = [
 
 
 function App() {
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = (import.meta.env.VITE_API_URL || "https://velar-1-f2ka.onrender.com").replace(/\/$/, "");
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -912,8 +912,8 @@ function App() {
               >
                 <div
                   className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${isAlert
-                      ? "border-red-300/20 bg-red-500/10"
-                      : "border-cyan-200/10 bg-cyan-300/5"
+                    ? "border-red-300/20 bg-red-500/10"
+                    : "border-cyan-200/10 bg-cyan-300/5"
                     }`}
                 >
                   <div
@@ -932,8 +932,8 @@ function App() {
                         scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
                       }}
                       className={`relative h-6 w-6 rounded-full transition-all duration-500 ${isAlert
-                          ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
-                          : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
+                        ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
+                        : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
                         }`}
                     />
                   )}
@@ -941,8 +941,8 @@ function App() {
 
                 <div
                   className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${isAlert
-                      ? "border-red-300/20 bg-red-500/10"
-                      : "border-cyan-200/10 bg-cyan-300/5"
+                    ? "border-red-300/20 bg-red-500/10"
+                    : "border-cyan-200/10 bg-cyan-300/5"
                     }`}
                 >
                   <div
@@ -961,8 +961,8 @@ function App() {
                         scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
                       }}
                       className={`relative h-6 w-6 rounded-full transition-all duration-500 ${isAlert
-                          ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
-                          : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
+                        ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
+                        : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
                         }`}
                     />
                   )}
@@ -1407,8 +1407,8 @@ function App() {
                           <div
                             key={index}
                             className={`rounded-2xl px-4 py-3 text-sm leading-7 ${msg.role === "user"
-                                ? "ml-auto max-w-[80%] bg-red-500 text-white"
-                                : "max-w-[85%] bg-white/10 text-white"
+                              ? "ml-auto max-w-[80%] bg-red-500 text-white"
+                              : "max-w-[85%] bg-white/10 text-white"
                               }`}
                           >
                             <div>{msg.content}</div>
@@ -1780,8 +1780,8 @@ function App() {
                               <div
                                 key={index}
                                 className={`rounded-2xl px-5 py-4 text-base leading-8 ${msg.role === "user"
-                                    ? "ml-auto max-w-[70%] bg-red-500 text-white"
-                                    : "max-w-[75%] bg-white/10 text-white"
+                                  ? "ml-auto max-w-[70%] bg-red-500 text-white"
+                                  : "max-w-[75%] bg-white/10 text-white"
                                   }`}
                               >
                                 {msg.content}
