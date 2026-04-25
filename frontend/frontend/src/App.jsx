@@ -33,6 +33,7 @@ const API_URL = import.meta.env.VITE_API_URL;
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 const [savedChats, setSavedChats] = useState([]);
 const [chatCounter, setChatCounter] = useState(1);
+const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 const [notes, setNotes] = useState([]);
 const [noteTitle, setNoteTitle] = useState("");
