@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import OpenAI from "openai";
+import multer from "multer";
 import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
@@ -11,11 +12,19 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const upload = multer({
+ storage: multer.memoryStorage()
+});
+
 const app = express();
 
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
-methods: ["GET", "POST", "DELETE"],
+ origin: [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  process.env.FRONTEND_URL,
+],
+methods: ["GET", "POST", "DELETE", "PATCH"],
   credentials: true,
 }));
 
@@ -71,11 +80,14 @@ app.post("/api/chat", async (req, res) => {
 // =======================
 
 // Get all notes
-app.get("/api/notes", async (req, res) => {
+app.get("/api/notes/:userId", async (req, res) => {
   try {
+    const { userId } = req.params;
+
     const { data, error } = await supabase
       .from("notes")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -92,7 +104,7 @@ app.get("/api/notes", async (req, res) => {
 // Create note
 app.post("/api/notes", async (req, res) => {
   try {
-    const { title, content } = req.body;
+   const { title, content, user_id } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({
@@ -102,7 +114,11 @@ app.post("/api/notes", async (req, res) => {
 
     const { data, error } = await supabase
       .from("notes")
-      .insert([{ title, content }])
+     .insert([{
+ title,
+ content,
+ user_id
+}])
       .select()
       .single();
 
@@ -134,6 +150,196 @@ app.delete("/api/notes/:id", async (req, res) => {
     console.error("Delete note error:", error);
     res.status(500).json({
       error: error.message || "Failed to delete note",
+    });
+  }
+});
+
+// =======================
+// TASK ROUTES
+// =======================
+
+
+app.get("/api/tasks/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    res.json({ tasks: data });
+  } catch (error) {
+    console.error("Fetch tasks error:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch tasks" });
+  }
+});
+
+app.post("/api/tasks", async (req, res) => {
+  try {
+    const { title, priority, user_id } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: "Task title is required" });
+    }
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert([
+       {
+  title,
+  priority: priority || "medium",
+  status: "pending",
+  user_id,
+},
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({ task: data });
+  } catch (error) {
+    console.error("Create task error:", error);
+    res.status(500).json({ error: error.message || "Failed to create task" });
+  }
+});
+
+app.patch("/api/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, priority, title } = req.body;
+
+    const updates = {};
+    if (status) updates.status = status;
+    if (priority) updates.priority = priority;
+    if (title) updates.title = title;
+
+    const { data, error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ task: data });
+  } catch (error) {
+    console.error("Update task error:", error);
+    res.status(500).json({ error: error.message || "Failed to update task" });
+  }
+});
+
+app.delete("/api/tasks/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+
+    if (error) throw error;
+
+    res.json({ message: "Task deleted successfully" });
+  } catch (error) {
+    console.error("Delete task error:", error);
+    res.status(500).json({ error: error.message || "Failed to delete task" });
+  }
+});
+
+// =======================
+// UPLOAD ROUTES
+// =======================
+
+app.get("/api/uploads/:userId", async (req, res) => {
+  
+try{
+const { userId } = req.params;
+ const { data,error } =
+ await supabase.storage
+  .from("uploads")
+ .list(userId, { limit: 100 });
+
+ if(error) throw error;
+
+ res.json({
+   files:data
+ });
+
+}catch(error){
+ console.error(error);
+
+ res.status(500).json({
+   error:error.message
+ });
+}
+});
+
+
+app.post(
+"/api/uploads/:userId",
+upload.single("file"),
+async(req,res)=>{
+try{
+  const { userId } = req.params;
+
+ if(!req.file){
+   return res.status(400).json({
+     error:"No file uploaded"
+   });
+ }
+
+const fileName = `${userId}/${Date.now()}-${req.file.originalname}`;
+
+ const { error } =
+ await supabase.storage
+  .from("uploads")
+  .upload(
+     fileName,
+     req.file.buffer,
+     {
+      contentType:req.file.mimetype
+     }
+  );
+
+ if(error) throw error;
+
+ res.json({
+   message:"Upload successful",
+   fileName
+ });
+
+}catch(error){
+ console.error(error);
+
+ res.status(500).json({
+   error:error.message
+ });
+}
+});
+
+
+app.delete("/api/uploads", async (req, res) => {
+  try {
+    const { filePath } = req.body;
+
+    if (!filePath) {
+      return res.status(400).json({ error: "File path is required" });
+    }
+
+    const { error } = await supabase.storage
+      .from("uploads")
+      .remove([filePath]);
+
+    if (error) throw error;
+
+    res.json({ message: "Deleted" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: error.message,
     });
   }
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import bootSound from "./assets/boot.mp3";
-
+import { supabase } from "./supabaseClient";
 
 const backgroundPaths = [
   "M120 180 L320 180 L420 260 L700 260",
@@ -18,8 +18,10 @@ const backgroundPaths = [
   "M780 60 L780 180 L700 240 L700 340",
 ];
 
-function App() {
 
+
+function App() {
+const API_URL = import.meta.env.VITE_API_URL;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -36,6 +38,22 @@ const [notes, setNotes] = useState([]);
 const [noteTitle, setNoteTitle] = useState("");
 const [noteContent, setNoteContent] = useState("");
 const [notesLoading, setNotesLoading] = useState(false);
+
+const [tasks, setTasks] = useState([]);
+const [taskTitle, setTaskTitle] = useState("");
+const [taskPriority, setTaskPriority] = useState("medium");
+const [tasksLoading, setTasksLoading] = useState(false);
+
+const [uploadedFiles, setUploadedFiles] = useState([]);
+const [selectedFile, setSelectedFile] = useState(null);
+const [uploadingFile, setUploadingFile] = useState(false);
+
+const [session, setSession] = useState(null);
+const [authEmail, setAuthEmail] = useState("");
+const [authPassword, setAuthPassword] = useState("");
+const [authMode, setAuthMode] = useState("login");
+const [authLoading, setAuthLoading] = useState(false);
+const [authError, setAuthError] = useState("");
 
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
@@ -98,7 +116,7 @@ const sendMessage = async () => {
   try {
 
     const res = await fetch(
-      "http://localhost:5000/api/chat",
+      "${API_URL}/api/chat",
       {
         method:"POST",
         headers:{
@@ -186,8 +204,11 @@ const scrollToSection = (id) => {
   }, []);
 
   useEffect(()=>{
+      if (session?.user?.id) {
  fetchNotes();
-},[]);
+ fetchTasks();
+  fetchUploads();
+}},[]);
 
   useEffect(() => {
     return () => {
@@ -433,13 +454,14 @@ const clearChat = () => {
 };
 
 const fetchNotes = async () => {
+    if (!session?.user?.id) return;
   try {
 
     setNotesLoading(true);
 
     const res = await fetch(
-      "http://localhost:5000/api/notes"
-    );
+`${API_URL}/api/notes/${session.user.id}`
+);
 
     const data = await res.json();
 
@@ -462,15 +484,16 @@ const saveNote = async () => {
   }
 
   try {
-    const res = await fetch("http://localhost:5000/api/notes", {
+    const res = await fetch("${API_URL}/api/notes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        title: noteTitle,
-        content: noteContent,
-      }),
+     body: JSON.stringify({
+  title: noteTitle,
+  content: noteContent,
+  user_id: session.user.id
+}),
     });
 
     const data = await res.json();
@@ -490,7 +513,7 @@ const saveNote = async () => {
 };
 const deleteNote = async (id) => {
   try {
-    const res = await fetch(`http://localhost:5000/api/notes/${id}`, {
+    const res = await fetch(`${API_URL}/api/notes/${id}`, {
       method: "DELETE",
     });
 
@@ -507,7 +530,7 @@ const saveChatToVault = async (messageText) => {
   try {
 
     await fetch(
-      "http://localhost:5000/api/notes",
+      "${API_URL}/api/notes",
       {
         method:"POST",
         headers:{
@@ -527,6 +550,183 @@ const saveChatToVault = async (messageText) => {
   }
 };
    
+const fetchTasks = async () => {
+  if (!session?.user?.id) return;
+
+  try {
+    setTasksLoading(true);
+
+    const res = await fetch(`${API_URL}/api/tasks/${session.user.id}`);
+    const data = await res.json();
+
+    setTasks(data.tasks || []);
+  } catch (err) {
+    console.error(err);
+  }
+
+  setTasksLoading(false);
+};
+
+const saveTask = async () => {
+  if (!taskTitle.trim()) return;
+
+  try {
+    const res = await fetch("${API_URL}/api/tasks", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    body: JSON.stringify({
+ title: taskTitle,
+ priority: taskPriority,
+ user_id: session.user.id
+}) ,
+    });
+
+    if (res.ok) {
+      setTaskTitle("");
+      setTaskPriority("medium");
+      fetchTasks();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const toggleTaskStatus = async (task) => {
+  const nextStatus = task.status === "done" ? "pending" : "done";
+
+  try {
+    await fetch(`${API_URL}/api/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status: nextStatus,
+      }),
+    });
+
+    fetchTasks();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const deleteTask = async (id) => {
+  try {
+    await fetch(`${API_URL}/api/tasks/${id}`, {
+      method: "DELETE",
+    });
+
+    fetchTasks();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const fetchUploads = async () => {
+  if (!session?.user?.id) return;
+  try {
+    const res = await 
+
+fetch(`${API_URL}/api/uploads/${session.user.id}`)
+    const data = await res.json();
+    setUploadedFiles(data.files || []);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const uploadFile = async () => {
+  if (!selectedFile) return;
+
+  try {
+    setUploadingFile(true);
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    const res = await fetch(`${API_URL}/api/uploads/${session.user.id}`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      setSelectedFile(null);
+      fetchUploads();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  setUploadingFile(false);
+};
+
+const deleteUpload = async (fileName) => {
+  try {
+    await fetch("${API_URL}/api/uploads", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        filePath: `${session.user.id}/${fileName}`,
+      }),
+    });
+
+    fetchUploads();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setSession(data.session);
+  });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    setSession(session);
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}, []);
+
+const handleAuth = async () => {
+  setAuthLoading(true);
+  setAuthError("");
+
+  try {
+    const result =
+      authMode === "login"
+        ? await supabase.auth.signInWithPassword({
+            email: authEmail,
+            password: authPassword,
+          })
+        : await supabase.auth.signUp({
+            email: authEmail,
+            password: authPassword,
+          });
+
+    if (result.error) {
+      setAuthError(result.error.message);
+    }
+  } catch (error) {
+    setAuthError("Authentication failed.");
+  }
+
+  setAuthLoading(false);
+};
+
+const logout = async () => {
+  await supabase.auth.signOut();
+};
 
   return (
     <div
@@ -785,7 +985,66 @@ const saveChatToVault = async (messageText) => {
           </motion.div>
         )}
       </AnimatePresence>
+{!session && (
+  <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#070707] px-6 text-white">
+    <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
+      <div className="text-4xl font-medium tracking-tight">
+        Velar<span className="text-red-600">.</span>
+      </div>
 
+      <p className="mt-3 text-white/55">
+        Sign in to access your voice-first AI workspace.
+      </p>
+
+      <div className="mt-8 space-y-4">
+        <input
+          type="email"
+          value={authEmail}
+          onChange={(e) => setAuthEmail(e.target.value)}
+          placeholder="Email"
+          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/35"
+        />
+
+        <input
+          type="password"
+          value={authPassword}
+          onChange={(e) => setAuthPassword(e.target.value)}
+          placeholder="Password"
+          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/35"
+        />
+
+        {authError && (
+          <p className="text-sm text-red-400">
+            {authError}
+          </p>
+        )}
+
+        <button
+          onClick={handleAuth}
+          disabled={authLoading}
+          className="w-full rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600 disabled:opacity-50"
+        >
+          {authLoading
+            ? "Please wait..."
+            : authMode === "login"
+            ? "Login"
+            : "Create Account"}
+        </button>
+      </div>
+
+      <button
+        onClick={() =>
+          setAuthMode(authMode === "login" ? "signup" : "login")
+        }
+        className="mt-6 text-sm text-white/55 transition hover:text-white"
+      >
+        {authMode === "login"
+          ? "New here? Create an account"
+          : "Already have an account? Login"}
+      </button>
+    </div>
+  </div>
+)}
 
 <AnimatePresence>
   {showMainUI && (
@@ -906,6 +1165,13 @@ const saveChatToVault = async (messageText) => {
             >
               {isFullscreen ? "Exit" : "Fullscreen"}
             </button>
+
+            <button
+  onClick={logout}
+  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/75 backdrop-blur-md transition hover:border-red-500/50 hover:text-white"
+>
+  Logout
+</button>
           </div>
         </div>
 
@@ -1095,7 +1361,7 @@ const saveChatToVault = async (messageText) => {
             </div>
           </section>
 
-         {/* use cases / MVPs */}
+    {/* use cases / MVPs */}
 <section
   id="use-cases"
   className="mx-auto w-full max-w-7xl px-10 py-24"
@@ -1110,212 +1376,297 @@ const saveChatToVault = async (messageText) => {
   </p>
 
   <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
-    {/* AI CHAT CARD — custom working module */}
+    {/* AI CHAT CARD */}
     <motion.div
-  id="ai-chat"
-  initial={{ opacity: 0, y: 40 }}
-  whileInView={{ opacity: 1, y: 0 }}
-  viewport={{ once: true, amount: 0.25 }}
-  transition={{ duration: 0.55, ease: "easeOut" }}
-  whileHover={{ y: -8, scale: 1.01 }}
-  className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
->
-  <div className="flex items-center justify-between">
-    <h3 className="text-4xl font-medium tracking-tight text-white">
-      AI Chat
-    </h3>
-<div className="flex gap-3">
-
-<button
- onClick={startNewChat}
- className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
->
- New Chat
-</button>
-
-<button
- onClick={clearChat}
- className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
->
- Clear
-</button>
-
-<button
- onClick={() => setIsChatExpanded(true)}
- className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
->
- Expand
-</button>
-
-</div>
-  </div>
-
-  <div className="mt-8 h-72 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-6">
-   {chatMessages.map((msg, index) => (
-  <div
-    key={index}
-    className={`rounded-2xl px-4 py-3 text-sm leading-7 ${
-      msg.role === "user"
-        ? "ml-auto max-w-[80%] bg-red-500 text-white"
-        : "max-w-[85%] bg-white/10 text-white"
-    }`}
-  >
-    <div>
-      {msg.content}
-    </div>
-
-    {msg.role === "assistant" && (
-      <button
-        onClick={() => saveChatToVault(msg.content)}
-        className="mt-3 text-xs text-red-300 transition hover:text-red-200"
-      >
-        Save to Vault
-      </button>
-    )}
-  </div>
-))}
-
-{loadingChat && (
-  <div className="text-sm text-white/50">
-    Velar thinking...
-  </div>
-)}
-  </div>
-
-  <div className="mt-6 flex gap-3">
-    <input
-      value={chatInput}
-      onChange={(e) => setChatInput(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") sendMessage();
-      }}
-      placeholder="Ask Velar anything..."
-      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-    />
-
-    <button
-      onClick={sendMessage}
-      className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+      id="ai-chat"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
     >
-      Send
-    </button>
-  </div>
-</motion.div>
-    {/* OTHER MVP CARDS — easy to edit later */}
-   {[
-  {
-    id: "knowledge",
-    title: "Knowledge Vault",
-    points: [
-      "Store notes, context, and documents",
-      "Build the base for semantic search",
-      "Organize information for grounded AI replies",
-    ],
-    cta: "Open Knowledge Vault →",
-  },
-  {
-    id: "tasks",
-    title: "Tasks",
-    points: [
-      "Track actions and execution steps",
-      "Structure work into manageable flows",
-      "Prepare for future automation workflows",
-    ],
-    cta: "Open Tasks →",
-  },
-  {
-    id: "uploads",
-    title: "Uploads",
-    points: [
-      "Bring files into the system clearly",
-      "Use uploads as future AI input sources",
-      "Build pipelines around user documents",
-    ],
-    cta: "Open Uploads →",
-  },
-].map((card, index) => (
-  <motion.div
-    key={card.id}
-    id={card.id}
-    initial={{ opacity: 0, y: 40 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true, amount: 0.25 }}
-    transition={{
-      duration: 0.55,
-      delay: (index + 1) * 0.06,
-      ease: "easeOut",
-    }}
-    whileHover={{ y: -8, scale: 1.01 }}
-    className="min-h-[340px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-  >
-    <h3 className="text-4xl font-medium tracking-tight text-white">
-      {card.title}
-    </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-4xl font-medium tracking-tight text-white">
+          AI Chat
+        </h3>
 
-    {card.id === "knowledge" ? (
-      <>
-        <div className="mt-8 space-y-4">
-          <input
-            value={noteTitle}
-            onChange={(e) => setNoteTitle(e.target.value)}
-            placeholder="Note title"
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-          />
-
-          <textarea
-            value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
-            rows={4}
-            placeholder="Write knowledge note..."
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-          />
+        <div className="flex gap-3">
+          <button
+            onClick={startNewChat}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+          >
+            New Chat
+          </button>
 
           <button
-            onClick={saveNote}
-            className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+            onClick={clearChat}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
           >
-            Save Note
+            Clear
+          </button>
+
+          <button
+            onClick={() => setIsChatExpanded(true)}
+            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+          >
+            Expand
           </button>
         </div>
+      </div>
 
-        <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className="rounded-2xl border border-white/10 bg-black/20 p-4"
-            >
-              <div className="flex justify-between">
-                <h4 className="text-white">{note.title}</h4>
+      <div className="mt-8 h-72 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-6">
+        {chatMessages.map((msg, index) => (
+          <div
+            key={index}
+            className={`rounded-2xl px-4 py-3 text-sm leading-7 ${
+              msg.role === "user"
+                ? "ml-auto max-w-[80%] bg-red-500 text-white"
+                : "max-w-[85%] bg-white/10 text-white"
+            }`}
+          >
+            <div>{msg.content}</div>
+
+            {msg.role === "assistant" && (
+              <button
+                onClick={() => saveChatToVault(msg.content)}
+                className="mt-3 text-xs text-red-300 transition hover:text-red-200"
+              >
+                Save to Vault
+              </button>
+            )}
+          </div>
+        ))}
+
+        {loadingChat && (
+          <div className="text-sm text-white/50">
+            Velar thinking...
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6 flex gap-3">
+        <input
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") sendMessage();
+          }}
+          placeholder="Ask Velar anything..."
+          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+        />
+
+        <button
+          onClick={sendMessage}
+          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+        >
+          Send
+        </button>
+      </div>
+    </motion.div>
+
+    {/* KNOWLEDGE VAULT CARD */}
+    <motion.div
+      id="knowledge"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, delay: 0.06, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-white">
+        Knowledge Vault
+      </h3>
+
+      <div className="mt-8 space-y-4">
+        <input
+          value={noteTitle}
+          onChange={(e) => setNoteTitle(e.target.value)}
+          placeholder="Note title"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+        />
+
+        <textarea
+          value={noteContent}
+          onChange={(e) => setNoteContent(e.target.value)}
+          rows={4}
+          placeholder="Write knowledge note..."
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+        />
+
+        <button
+          onClick={saveNote}
+          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+        >
+          Save Note
+        </button>
+      </div>
+
+      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+        {notes.map((note) => (
+          <div
+            key={note.id}
+            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+          >
+            <div className="flex justify-between gap-4">
+              <h4 className="text-white">{note.title}</h4>
+
+              <button
+                onClick={() => deleteNote(note.id)}
+                className="text-sm text-red-400 transition hover:text-red-300"
+              >
+                Delete
+              </button>
+            </div>
+
+            <p className="mt-3 text-white/60">{note.content}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+
+    {/* TASKS CARD */}
+    <motion.div
+      id="tasks"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, delay: 0.12, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-white">
+        Tasks
+      </h3>
+
+      <div className="mt-8 space-y-4">
+        <input
+          value={taskTitle}
+          onChange={(e) => setTaskTitle(e.target.value)}
+          placeholder="Task title"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+        />
+
+        <select
+          value={taskPriority}
+          onChange={(e) => setTaskPriority(e.target.value)}
+          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+        >
+          <option value="low">Low priority</option>
+          <option value="medium">Medium priority</option>
+          <option value="high">High priority</option>
+        </select>
+
+        <button
+          onClick={saveTask}
+          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+        >
+          Add Task
+        </button>
+      </div>
+
+      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+        {tasksLoading && <p className="text-white/50">Loading tasks...</p>}
+
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4
+                  className={`text-white ${
+                    task.status === "done" ? "line-through opacity-50" : ""
+                  }`}
+                >
+                  {task.title}
+                </h4>
+
+                <p className="mt-2 text-sm text-white/45">
+                  {task.priority} priority • {task.status}
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => toggleTaskStatus(task)}
+                  className="text-sm text-red-400 transition hover:text-red-300"
+                >
+                  {task.status === "done" ? "Undo" : "Done"}
+                </button>
 
                 <button
-                  onClick={() => deleteNote(note.id)}
-                  className="text-red-400 transition hover:text-red-300"
+                  onClick={() => deleteTask(task.id)}
+                  className="text-sm text-white/40 transition hover:text-red-300"
                 >
                   Delete
                 </button>
               </div>
-
-              <p className="mt-3 text-white/60">{note.content}</p>
             </div>
-          ))}
-        </div>
-      </>
-    ) : (
-      <>
-        <div className="mt-8 space-y-4 text-lg leading-8 text-white/60">
-          {card.points.map((point) => (
-            <p key={point}>- {point}</p>
-          ))}
-        </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
 
-        <button className="mt-10 text-lg text-red-500 transition hover:text-red-400">
-          {card.cta}
+    {/* UPLOADS CARD */}
+    <motion.div
+      id="uploads"
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.25 }}
+      transition={{ duration: 0.55, delay: 0.18, ease: "easeOut" }}
+      whileHover={{ y: -8, scale: 1.01 }}
+      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+    >
+      <h3 className="text-4xl font-medium tracking-tight text-white">
+        Uploads
+      </h3>
+
+      <div className="mt-8 space-y-4">
+        <input
+          type="file"
+          onChange={(e) => setSelectedFile(e.target.files[0])}
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-red-500 file:px-4 file:py-2 file:text-white"
+        />
+
+        <button
+          onClick={uploadFile}
+          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+        >
+          {uploadingFile ? "Uploading..." : "Upload File"}
         </button>
-      </>
-    )}
-  </motion.div>
-))}
-</div>
+      </div>
+
+      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+        {uploadedFiles.length === 0 ? (
+          <p className="text-white/45">No files uploaded yet.</p>
+        ) : (
+          uploadedFiles.map((file) => (
+            <div
+              key={file.name}
+              className="rounded-2xl border border-white/10 bg-black/20 p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h4 className="break-all text-white">{file.name}</h4>
+                  <p className="mt-2 text-sm text-white/45">Uploaded file</p>
+                </div>
+
+                <button
+                  onClick={() => deleteUpload(file.name)}
+                  className="text-sm text-red-400 transition hover:text-red-300"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </motion.div>
+  </div>
 </section>
 
           {/* Credits */}
