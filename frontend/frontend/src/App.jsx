@@ -21,7 +21,7 @@ const backgroundPaths = [
 
 
 function App() {
-const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -31,162 +31,159 @@ const API_URL = import.meta.env.VITE_API_URL;
   const [showMainUI, setShowMainUI] = useState(false);
   const [isProcessingWake, setIsProcessingWake] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-const [savedChats, setSavedChats] = useState([]);
-const [chatCounter, setChatCounter] = useState(1);
-const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [savedChats, setSavedChats] = useState([]);
+  const [chatCounter, setChatCounter] = useState(1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-const [notes, setNotes] = useState([]);
-const [noteTitle, setNoteTitle] = useState("");
-const [noteContent, setNoteContent] = useState("");
-const [notesLoading, setNotesLoading] = useState(false);
+  const [notes, setNotes] = useState([]);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [notesLoading, setNotesLoading] = useState(false);
 
-const [tasks, setTasks] = useState([]);
-const [taskTitle, setTaskTitle] = useState("");
-const [taskPriority, setTaskPriority] = useState("medium");
-const [tasksLoading, setTasksLoading] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [taskTitle, setTaskTitle] = useState("");
+  const [taskPriority, setTaskPriority] = useState("medium");
+  const [tasksLoading, setTasksLoading] = useState(false);
 
-const [uploadedFiles, setUploadedFiles] = useState([]);
-const [selectedFile, setSelectedFile] = useState(null);
-const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
-const [session, setSession] = useState(null);
-const [authEmail, setAuthEmail] = useState("");
-const [authPassword, setAuthPassword] = useState("");
-const [authMode, setAuthMode] = useState("login");
-const [authLoading, setAuthLoading] = useState(false);
-const [authError, setAuthError] = useState("");
+  const [session, setSession] = useState(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authMode, setAuthMode] = useState("login");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
   const bootTimerRef = useRef([]);
   const voiceEnabledRef = useRef(false);
-const mainScrollRef = useRef(null);
-const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const mainScrollRef = useRef(null);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
 
-const [chatInput, setChatInput] = useState("");
-const [chatMessages, setChatMessages] = useState([
-  {
-    role: "assistant",
-    content: "Velar online. How can I help?"
-  }
-]);
-
-const startNewChat = () => {
-
-  setSavedChats(prev => [
-    ...prev,
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState([
     {
-      id: chatCounter,
-      title: `Chat ${chatCounter}`,
-      messages: chatMessages
+      role: "assistant",
+      content: "Velar online. How can I help?"
     }
   ]);
 
-  setChatCounter(prev=>prev+1);
+  const startNewChat = () => {
 
-  setChatMessages([
-    {
-      role:"assistant",
-      content:"Velar online. How can I help?"
-    }
-  ]);
+    setSavedChats(prev => [
+      ...prev,
+      {
+        id: chatCounter,
+        title: `Chat ${chatCounter}`,
+        messages: chatMessages
+      }
+    ]);
 
-  setChatInput("");
-};
+    setChatCounter(prev => prev + 1);
 
-const loadSavedChat = (chat) => {
-  setChatMessages(chat.messages);
-};
+    setChatMessages([
+      {
+        role: "assistant",
+        content: "Velar online. How can I help?"
+      }
+    ]);
 
-const deleteSavedChat = (chatId) => {
-  setSavedChats((prev) => prev.filter((chat) => chat.id !== chatId));
-};
-
-const sendMessage = async () => {
-  if (!chatInput.trim() || loadingChat) return;
-
-  const userMessage = {
-    role: "user",
-    content: chatInput
+    setChatInput("");
   };
 
-  setChatMessages(prev => [...prev, userMessage]);
-  setChatInput("");
-  setLoadingChat(true);
+  const loadSavedChat = (chat) => {
+    setChatMessages(chat.messages);
+  };
 
-  try {
+  const deleteSavedChat = (chatId) => {
+    setSavedChats((prev) => prev.filter((chat) => chat.id !== chatId));
+  };
 
-    const res = await fetch(
-      "${API_URL}/api/chat",
-      {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
+  const sendMessage = async () => {
+    if (!chatInput.trim() || loadingChat) return;
+
+    const userMessage = {
+      role: "user",
+      content: chatInput
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput("");
+    setLoadingChat(true);
+
+    try {
+
+      const res = await fetch(`${API_URL}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: userMessage.content
-        })
-      }
-    );
+          message: userMessage.content,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    setChatMessages(prev => [
-      ...prev,
-      {
-        role:"assistant",
-       content: data.reply || data.error || "No reply received from backend."
-      }
-    ]);
+      setChatMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: data.reply || data.error || "No reply received from backend."
+        }
+      ]);
 
-  } catch(err){
+    } catch (err) {
 
-    console.error(err);
+      console.error(err);
 
-    setChatMessages(prev => [
-      ...prev,
-      {
-        role:"assistant",
-        content:"Backend connection failed."
-      }
-    ]);
+      setChatMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Backend connection failed."
+        }
+      ]);
 
-  }
+    }
 
-  setLoadingChat(false);
-};
+    setLoadingChat(false);
+  };
 
-const [loadingChat, setLoadingChat] = useState(false);
+  const [loadingChat, setLoadingChat] = useState(false);
 
   const navItems = [
-  { id: "ai-chat", label: "AI Chat" },
-  { id: "knowledge-vault", label: "Knowledge Vault" },
-  { id: "tasks", label: "Tasks" },
-  { id: "uploads", label: "Uploads" },
-  { id: "credits", label: "Credits" },
-];
+    { id: "ai-chat", label: "AI Chat" },
+    { id: "knowledge-vault", label: "Knowledge Vault" },
+    { id: "tasks", label: "Tasks" },
+    { id: "uploads", label: "Uploads" },
+    { id: "credits", label: "Credits" },
+  ];
 
-const scrollToSection = (id) => {
-  const container = mainScrollRef.current;
-  const section = document.getElementById(id);
+  const scrollToSection = (id) => {
+    const container = mainScrollRef.current;
+    const section = document.getElementById(id);
 
-  if (!container || !section) {
-    console.log("Scroll target missing:", id);
-    return;
-  }
+    if (!container || !section) {
+      console.log("Scroll target missing:", id);
+      return;
+    }
 
-  const top =
-    section.offsetTop -
-    container.offsetTop -
-    90;
+    const top =
+      section.offsetTop -
+      container.offsetTop -
+      90;
 
-  container.scrollTo({
-    top,
-    behavior: "smooth",
-  });
+    container.scrollTo({
+      top,
+      behavior: "smooth",
+    });
 
-  console.log("Scrolling to:", id);
-};
+    console.log("Scrolling to:", id);
+  };
 
   useEffect(() => {
     voiceEnabledRef.current = voiceEnabled;
@@ -204,12 +201,13 @@ const scrollToSection = (id) => {
     };
   }, []);
 
-  useEffect(()=>{
-      if (session?.user?.id) {
- fetchNotes();
- fetchTasks();
-  fetchUploads();
-}},[]);
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchNotes();
+      fetchTasks();
+      fetchUploads();
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -287,85 +285,85 @@ const scrollToSection = (id) => {
     bootTimerRef.current = [];
   };
 
- const runWakeSequence = () => {
-  console.log("runWakeSequence fired");
-  if (isProcessingWake || showMainUI) return;
+  const runWakeSequence = () => {
+    console.log("runWakeSequence fired");
+    if (isProcessingWake || showMainUI) return;
 
-  clearBootTimers();
+    clearBootTimers();
 
-  setIsProcessingWake(true);
-  setBooting(true);
-  setShowMainUI(false);
-  setIsAlert(true);
+    setIsProcessingWake(true);
+    setBooting(true);
+    setShowMainUI(false);
+    setIsAlert(true);
 
-  const showUiTimer = setTimeout(() => {
-    setShowMainUI(true);
-    setBooting(false);
-    setIsProcessingWake(false);
-    setIsAlert(false);
-  }, 2400);
+    const showUiTimer = setTimeout(() => {
+      setShowMainUI(true);
+      setBooting(false);
+      setIsProcessingWake(false);
+      setIsAlert(false);
+    }, 2400);
 
-  bootTimerRef.current = [showUiTimer];
-};
+    bootTimerRef.current = [showUiTimer];
+  };
 
-const handleTranscript = (rawText) => {
-  const transcript = rawText.toLowerCase().trim();
-  console.log("Heard:", transcript);
+  const handleTranscript = (rawText) => {
+    const transcript = rawText.toLowerCase().trim();
+    console.log("Heard:", transcript);
 
-  if (
-    !isAwake &&
-    (transcript.includes("wake velar") || transcript.includes("wake up"))
-  ) {
-    setIsAwake(true);
-    return;
-  }
+    if (
+      !isAwake &&
+      (transcript.includes("wake velar") || transcript.includes("wake up"))
+    ) {
+      setIsAwake(true);
+      return;
+    }
 
-  if (
-    transcript.includes("start the app") ||
-    transcript.includes("initialize velar")
-  ) {
-    if (!isAwake) setIsAwake(true);
-    runWakeSequence();
-    return;
-  }
+    if (
+      transcript.includes("start the app") ||
+      transcript.includes("initialize velar")
+    ) {
+      if (!isAwake) setIsAwake(true);
+      runWakeSequence();
+      return;
+    }
 
-  if (transcript.includes("open workflow") || transcript === "workflow") {
-    scrollToSection("workflow");
-    return;
-  }
+    if (transcript.includes("open workflow") || transcript === "workflow") {
+      scrollToSection("workflow");
+      return;
+    }
 
-  if (transcript.includes("open ai chat") || transcript.includes("ai chat")) {
-    scrollToSection("ai-chat");
-    return;
-  }
+    if (transcript.includes("open ai chat") || transcript.includes("ai chat")) {
+      scrollToSection("ai-chat");
+      return;
+    }
 
-  if (
-    transcript.includes("open knowledge vault") ||
-    transcript.includes("knowledge vault")
-  ) {
-    scrollToSection("knowledge");
-    return;
-  }
+    if (
+      transcript.includes("open knowledge vault") ||
+      transcript.includes("knowledge vault")
+    ) {
+      scrollToSection("knowledge");
+      return;
+    }
 
-  if (transcript.includes("open tasks") || transcript === "tasks") {
-    scrollToSection("tasks");
-    return;
-  }
+    if (transcript.includes("open tasks") || transcript === "tasks") {
+      scrollToSection("tasks");
+      return;
+    }
 
-  if (transcript.includes("open uploads") || transcript === "uploads") {
-    scrollToSection("uploads");
-    return;
-  }
+    if (transcript.includes("open uploads") || transcript === "uploads") {
+      scrollToSection("uploads");
+      return;
+    }
 
-  if (transcript.includes("show credits") || transcript.includes("credits")) {
-    scrollToSection("credits");
-    return;
-  }
+    if (transcript.includes("show credits") || transcript.includes("credits")) {
+      scrollToSection("credits");
+      return;
+    }
 
-  if (transcript.includes("go home") || transcript === "home") {
-    scrollToSection("hero");
-  }
-};
+    if (transcript.includes("go home") || transcript === "home") {
+      scrollToSection("hero");
+    }
+  };
 
   const startListening = async () => {
     await unlockAudio();
@@ -440,294 +438,291 @@ const handleTranscript = (rawText) => {
     const y = (event.clientY / innerHeight - 0.5) * 5;
     setMousePosition({ x, y });
 
-   
+
 
   };
- 
-const clearChat = () => {
-  setChatMessages([
-    {
-      role: "assistant",
-      content: "Velar online. How can I help?",
-    },
-  ]);
-  setChatInput("");
-};
 
-const fetchNotes = async () => {
-    if (!session?.user?.id) return;
-  try {
-
-    setNotesLoading(true);
-
-    const res = await fetch(
-`${API_URL}/api/notes/${session.user.id}`
-);
-
-    const data = await res.json();
-
-    setNotes(data.notes || []);
-
-  } catch(err){
-    console.error(err);
-  }
-
-  setNotesLoading(false);
-};
-
-
-const saveNote = async () => {
-  console.log("Save clicked");
-
-  if (!noteTitle.trim() || !noteContent.trim()) {
-    console.log("Missing title or content");
-    return;
-  }
-
-  try {
-    const res = await fetch("${API_URL}/api/notes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+  const clearChat = () => {
+    setChatMessages([
+      {
+        role: "assistant",
+        content: "Velar online. How can I help?",
       },
-     body: JSON.stringify({
-  title: noteTitle,
-  content: noteContent,
-  user_id: session.user.id
-}),
-    });
+    ]);
+    setChatInput("");
+  };
 
-    const data = await res.json();
-    console.log("Save response:", data);
+  const fetchNotes = async () => {
+    if (!session?.user?.id) return;
+    try {
 
-    if (!res.ok) {
-      console.log("Save failed:", data.error);
+      setNotesLoading(true);
+
+      const res = await fetch(
+        `${API_URL}/api/notes/${session.user.id}`
+      );
+
+      const data = await res.json();
+
+      setNotes(data.notes || []);
+
+    } catch (err) {
+      console.error(err);
+    }
+
+    setNotesLoading(false);
+  };
+
+
+  const saveNote = async () => {
+    console.log("Save clicked");
+
+    if (!noteTitle.trim() || !noteContent.trim()) {
+      console.log("Missing title or content");
       return;
     }
 
-    setNoteTitle("");
-    setNoteContent("");
-    fetchNotes();
-  } catch (err) {
-    console.error("Save note error:", err);
-  }
-};
-const deleteNote = async (id) => {
-  try {
-    const res = await fetch(`${API_URL}/api/notes/${id}`, {
-      method: "DELETE",
-    });
-
-    const data = await res.json();
-    console.log("Delete response:", data);
-
-    fetchNotes();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const saveChatToVault = async (messageText) => {
-  try {
-
-    await fetch(
-      "${API_URL}/api/notes",
-      {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
+    try {
+      const res = await fetch(`${API_URL}/api/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        body:JSON.stringify({
-          title:"Saved from AI Chat",
-          content:messageText
-        })
+        body: JSON.stringify({
+          title: noteTitle,
+          content: noteContent,
+          user_id: session.user.id,
+        }),
+      });
+
+      const data = await res.json();
+      console.log("Save response:", data);
+
+      if (!res.ok) {
+        console.log("Save failed:", data.error);
+        return;
       }
-    );
 
-    fetchNotes();
-
-  } catch(err){
-    console.error(err);
-  }
-};
-   
-const fetchTasks = async () => {
-  if (!session?.user?.id) return;
-
-  try {
-    setTasksLoading(true);
-
-    const res = await fetch(`${API_URL}/api/tasks/${session.user.id}`);
-    const data = await res.json();
-
-    setTasks(data.tasks || []);
-  } catch (err) {
-    console.error(err);
-  }
-
-  setTasksLoading(false);
-};
-
-const saveTask = async () => {
-  if (!taskTitle.trim()) return;
-
-  try {
-    const res = await fetch("${API_URL}/api/tasks", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    body: JSON.stringify({
- title: taskTitle,
- priority: taskPriority,
- user_id: session.user.id
-}) ,
-    });
-
-    if (res.ok) {
-      setTaskTitle("");
-      setTaskPriority("medium");
-      fetchTasks();
+      setNoteTitle("");
+      setNoteContent("");
+      fetchNotes();
+    } catch (err) {
+      console.error("Save note error:", err);
     }
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const toggleTaskStatus = async (task) => {
-  const nextStatus = task.status === "done" ? "pending" : "done";
-
-  try {
-    await fetch(`${API_URL}/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        status: nextStatus,
-      }),
-    });
-
-    fetchTasks();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const deleteTask = async (id) => {
-  try {
-    await fetch(`${API_URL}/api/tasks/${id}`, {
-      method: "DELETE",
-    });
-
-    fetchTasks();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const fetchUploads = async () => {
-  if (!session?.user?.id) return;
-  try {
-    const res = await 
-
-fetch(`${API_URL}/api/uploads/${session.user.id}`)
-    const data = await res.json();
-    setUploadedFiles(data.files || []);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const uploadFile = async () => {
-  if (!selectedFile) return;
-
-  try {
-    setUploadingFile(true);
-
-    const formData = new FormData();
-    formData.append("file", selectedFile);
-
-    const res = await fetch(`${API_URL}/api/uploads/${session.user.id}`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (res.ok) {
-      setSelectedFile(null);
-      fetchUploads();
-    }
-  } catch (err) {
-    console.error(err);
-  }
-
-  setUploadingFile(false);
-};
-
-const deleteUpload = async (fileName) => {
-  try {
-    await fetch("${API_URL}/api/uploads", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        filePath: `${session.user.id}/${fileName}`,
-      }),
-    });
-
-    fetchUploads();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-
-useEffect(() => {
-  supabase.auth.getSession().then(({ data }) => {
-    setSession(data.session);
-  });
-
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, session) => {
-    setSession(session);
-  });
-
-  return () => {
-    subscription.unsubscribe();
   };
-}, []);
+  const deleteNote = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/api/notes/${id}`, {
+        method: "DELETE",
+      });
 
-const handleAuth = async () => {
-  setAuthLoading(true);
-  setAuthError("");
+      const data = await res.json();
+      console.log("Delete response:", data);
 
-  try {
-    const result =
-      authMode === "login"
-        ? await supabase.auth.signInWithPassword({
+      fetchNotes();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const saveChatToVault = async (messageText) => {
+    try {
+
+      await fetch(`${API_URL}/api/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: "Saved from AI Chat",
+          content: messageText,
+        }),
+      });
+
+      fetchNotes();
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchTasks = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      setTasksLoading(true);
+
+      const res = await fetch(`${API_URL}/api/tasks/${session.user.id}`);
+      const data = await res.json();
+
+      setTasks(data.tasks || []);
+    } catch (err) {
+      console.error(err);
+    }
+
+    setTasksLoading(false);
+  };
+
+  const saveTask = async () => {
+    if (!taskTitle.trim()) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: taskTitle,
+          priority: taskPriority,
+          user_id: session.user.id,
+        }),
+      });
+
+      if (res.ok) {
+        setTaskTitle("");
+        setTaskPriority("medium");
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const toggleTaskStatus = async (task) => {
+    const nextStatus = task.status === "done" ? "pending" : "done";
+
+    try {
+      await fetch(`${API_URL}/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: nextStatus,
+        }),
+      });
+
+      fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteTask = async (id) => {
+    try {
+      await fetch(`${API_URL}/api/tasks/${id}`, {
+        method: "DELETE",
+      });
+
+      fetchTasks();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchUploads = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const res = await
+
+        fetch(`${API_URL}/api/uploads/${session.user.id}`)
+      const data = await res.json();
+      setUploadedFiles(data.files || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!selectedFile) return;
+
+    try {
+      setUploadingFile(true);
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const res = await fetch(`${API_URL}/api/uploads/${session.user.id}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        setSelectedFile(null);
+        fetchUploads();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
+    setUploadingFile(false);
+  };
+
+  const deleteUpload = async (fileName) => {
+    try {
+      await fetch(`${API_URL}/api/uploads`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          filePath: `${session.user.id}/${fileName}`,
+        }),
+      });
+
+      fetchUploads();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleAuth = async () => {
+    setAuthLoading(true);
+    setAuthError("");
+
+    try {
+      const result =
+        authMode === "login"
+          ? await supabase.auth.signInWithPassword({
             email: authEmail,
             password: authPassword,
           })
-        : await supabase.auth.signUp({
+          : await supabase.auth.signUp({
             email: authEmail,
             password: authPassword,
           });
 
-    if (result.error) {
-      setAuthError(result.error.message);
+      if (result.error) {
+        setAuthError(result.error.message);
+      }
+    } catch (error) {
+      setAuthError("Authentication failed.");
     }
-  } catch (error) {
-    setAuthError("Authentication failed.");
-  }
 
-  setAuthLoading(false);
-};
+    setAuthLoading(false);
+  };
 
-const logout = async () => {
-  await supabase.auth.signOut();
-};
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <div
@@ -736,92 +731,92 @@ const logout = async () => {
     >
       {/* ================= INTRO BACKGROUND ================= */}
 
-<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.08),transparent_28%),linear-gradient(to_bottom,#050505,#090909)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.08),transparent_28%),linear-gradient(to_bottom,#050505,#090909)]" />
 
-<svg
-  className="absolute inset-0 z-[1] pointer-events-none opacity-45"
-  width="100%"
-  height="100%"
-  viewBox="0 0 1200 800"
-  preserveAspectRatio="none"
->
-  {backgroundPaths.map((path, index) => (
-    <g key={path}>
-      <motion.path
-        d={path}
-        fill="none"
-        stroke="rgba(220,38,38,0.18)"
-        strokeWidth="1"
-        animate={{
-          x: mousePosition.x * (10 + index * 2),
-          y: mousePosition.y * (10 + index * 2),
-        }}
-        transition={{
-          type:"spring",
-          stiffness:45,
-          damping:18
-        }}
+      <svg
+        className="absolute inset-0 z-[1] pointer-events-none opacity-45"
+        width="100%"
+        height="100%"
+        viewBox="0 0 1200 800"
+        preserveAspectRatio="none"
+      >
+        {backgroundPaths.map((path, index) => (
+          <g key={path}>
+            <motion.path
+              d={path}
+              fill="none"
+              stroke="rgba(220,38,38,0.18)"
+              strokeWidth="1"
+              animate={{
+                x: mousePosition.x * (10 + index * 2),
+                y: mousePosition.y * (10 + index * 2),
+              }}
+              transition={{
+                type: "spring",
+                stiffness: 45,
+                damping: 18
+              }}
+            />
+
+            <motion.path
+              d={path}
+              fill="none"
+              stroke="rgba(255,255,255,0.45)"
+              strokeWidth="1.8"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{
+                pathLength: [0, .12, .12],
+                pathOffset: [0, 0, .88],
+                opacity: [0, .7, 0]
+              }}
+              transition={{
+                duration: 6,
+                delay: index * .22,
+                repeat: Infinity
+              }}
+            />
+          </g>
+        ))}
+      </svg>
+
+
+      <motion.div
+        animate={{ x: [0, 18, -8, 0], y: [0, -10, 12, 0] }}
+        transition={{ duration: 18, repeat: Infinity }}
+        className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-red-500/10 blur-3xl"
       />
 
-      <motion.path
-        d={path}
-        fill="none"
-        stroke="rgba(255,255,255,0.45)"
-        strokeWidth="1.8"
-        initial={{ pathLength:0, opacity:0 }}
-        animate={{
-          pathLength:[0,.12,.12],
-          pathOffset:[0,0,.88],
-          opacity:[0,.7,0]
-        }}
-        transition={{
-          duration:6,
-          delay:index*.22,
-          repeat:Infinity
-        }}
+      <motion.div
+        animate={{ x: [0, -16, 10, 0], y: [0, 10, -10, 0] }}
+        transition={{ duration: 22, repeat: Infinity }}
+        className="absolute right-[10%] bottom-[12%] h-72 w-72 rounded-full bg-white/5 blur-3xl"
       />
-    </g>
-  ))}
-</svg>
-
-
-<motion.div
- animate={{ x:[0,18,-8,0], y:[0,-10,12,0] }}
- transition={{duration:18,repeat:Infinity}}
- className="absolute left-[8%] top-[12%] h-64 w-64 rounded-full bg-red-500/10 blur-3xl"
-/>
-
-<motion.div
- animate={{ x:[0,-16,10,0], y:[0,10,-10,0] }}
- transition={{duration:22,repeat:Infinity}}
- className="absolute right-[10%] bottom-[12%] h-72 w-72 rounded-full bg-white/5 blur-3xl"
-/>
 
       {!showMainUI && (
-  <>
-    <div className="absolute left-4 top-4 z-30 flex items-center gap-3">
-      <button
-        onClick={voiceEnabled ? stopListening : startListening}
-        className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.24em] text-white/75 transition-all duration-300 hover:border-white/40 hover:text-white"
-      >
-        {voiceEnabled ? "VOICE ON" : "ENABLE VOICE"}
-      </button>
+        <>
+          <div className="absolute left-4 top-4 z-30 flex items-center gap-3">
+            <button
+              onClick={voiceEnabled ? stopListening : startListening}
+              className="rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.24em] text-white/75 transition-all duration-300 hover:border-white/40 hover:text-white"
+            >
+              {voiceEnabled ? "VOICE ON" : "ENABLE VOICE"}
+            </button>
 
-      <div className="text-[10px] tracking-[0.24em] text-white/35">
-        {isListening ? "LISTENING" : "STANDBY"}
-      </div>
-    </div>
+            <div className="text-[10px] tracking-[0.24em] text-white/35">
+              {isListening ? "LISTENING" : "STANDBY"}
+            </div>
+          </div>
 
-    <button
-      onClick={toggleFullscreen}
-      className="absolute right-4 top-4 z-30 rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.24em] text-white/75 transition-all duration-300 hover:border-white/40 hover:text-white"
-    >
-      {isFullscreen ? "EXIT" : "FULLSCREEN"}
-    </button>
-  </>
-)}
+          <button
+            onClick={toggleFullscreen}
+            className="absolute right-4 top-4 z-30 rounded-md border border-white/15 px-3 py-1.5 text-[10px] tracking-[0.24em] text-white/75 transition-all duration-300 hover:border-white/40 hover:text-white"
+          >
+            {isFullscreen ? "EXIT" : "FULLSCREEN"}
+          </button>
+        </>
+      )}
 
- 
+
 
       <AnimatePresence mode="wait">
         {!showMainUI && (
@@ -836,99 +831,94 @@ const logout = async () => {
             <div className="relative flex items-center justify-center">
               {/* ========= VELAR SPLASH TYPOGRAPHY ========= */}
 
-<div className="absolute z-20 flex flex-col items-center text-center px-6">
+              <div className="absolute z-20 flex flex-col items-center text-center px-6">
 
-  <motion.div
-    initial={{opacity:0,y:18}}
-    animate={{opacity:1,y:0}}
-    transition={{duration:0.8}}
-    className="text-[76px] md:text-[110px] font-medium tracking-tight text-white"
-  >
-    VELAR<span className="text-red-600">.</span>
-  </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="text-[76px] md:text-[110px] font-medium tracking-tight text-white"
+                >
+                  VELAR<span className="text-red-600">.</span>
+                </motion.div>
 
-  <motion.p
-    initial={{opacity:0}}
-    animate={{opacity:1}}
-    transition={{delay:.35}}
-    className="mt-2 text-xl md:text-2xl text-white/60"
-  >
-    Voice-First Intelligent Workspace
-  </motion.p>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: .35 }}
+                  className="mt-2 text-xl md:text-2xl text-white/60"
+                >
+                  Voice-First Intelligent Workspace
+                </motion.p>
 
- <motion.button
-  initial={{ opacity:0 }}
-  animate={{ opacity:1 }}
-  transition={{ delay:.7 }}
-  onClick={runWakeSequence}
-  className="mt-12 rounded-full border border-white/10 bg-white/[0.03] px-7 py-3 text-sm tracking-[0.25em] text-white/55 backdrop-blur-md transition hover:border-red-500/50 hover:text-white"
->
-  {booting
-    ? "INITIALIZING INTERFACE..."
-    : 'SAY OR CLICK "START THE APP"'}
-</motion.button>
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: .7 }}
+                  onClick={runWakeSequence}
+                  className="mt-12 rounded-full border border-white/10 bg-white/[0.03] px-7 py-3 text-sm tracking-[0.25em] text-white/55 backdrop-blur-md transition hover:border-red-500/50 hover:text-white"
+                >
+                  {booting
+                    ? "INITIALIZING INTERFACE..."
+                    : 'SAY OR CLICK "START THE APP"'}
+                </motion.button>
 
-  <motion.div
-    initial={{opacity:0}}
-    animate={{opacity:1}}
-    transition={{delay:1}}
-    className="mt-8 text-[11px] tracking-[0.35em] text-red-500/70"
-  >
-    VOICE READY • SYSTEM ONLINE
-  </motion.div>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                  className="mt-8 text-[11px] tracking-[0.35em] text-red-500/70"
+                >
+                  VOICE READY • SYSTEM ONLINE
+                </motion.div>
 
-</div>
+              </div>
               {booting && (
                 <>
                   <motion.div
                     initial={{ scale: 0.7, opacity: 0 }}
                     animate={{ scale: [0.82, 1.05, 1], opacity: [0, 0.8, 0.35] }}
                     transition={{ duration: 1.3, ease: "easeOut" }}
-                    className={`absolute h-48 w-48 rounded-full border ${
-                      isAlert ? "border-red-300/30" : "border-cyan-200/20"
-                    }`}
+                    className={`absolute h-48 w-48 rounded-full border ${isAlert ? "border-red-300/30" : "border-cyan-200/20"
+                      }`}
                   />
 
                   <motion.div
                     initial={{ rotate: 0, opacity: 0 }}
                     animate={{ rotate: 180, opacity: [0, 0.65, 0.2] }}
                     transition={{ duration: 2.2, ease: "linear" }}
-                    className={`absolute h-64 w-64 rounded-full border ${
-                      isAlert ? "border-red-400/20" : "border-cyan-300/15"
-                    }`}
+                    className={`absolute h-64 w-64 rounded-full border ${isAlert ? "border-red-400/20" : "border-cyan-300/15"
+                      }`}
                   />
 
                   <motion.div
                     initial={{ scale: 0.2, opacity: 0 }}
                     animate={{ scale: [0.2, 1, 1.15], opacity: [0, 0.45, 0] }}
                     transition={{ duration: 1.5, delay: 1.2, ease: "easeOut" }}
-                    className={`absolute h-28 w-28 rounded-full blur-2xl ${
-                      isAlert ? "bg-red-400/20" : "bg-cyan-300/20"
-                    }`}
+                    className={`absolute h-28 w-28 rounded-full blur-2xl ${isAlert ? "bg-red-400/20" : "bg-cyan-300/20"
+                      }`}
                   />
                 </>
               )}
 
               <motion.div
-               animate={
-  isAwake
-    ? { scaleY: 1, opacity: isAlert ? 0.55 : 0.34, filter: "blur(0px)" }
-    : { scaleY: 0.12, opacity: 0.2, filter: "blur(2px)" }
-}
+                animate={
+                  isAwake
+                    ? { scaleY: 1, opacity: isAlert ? 0.55 : 0.34, filter: "blur(0px)" }
+                    : { scaleY: 0.12, opacity: 0.2, filter: "blur(2px)" }
+                }
                 transition={{ duration: 0.5, ease: "easeInOut" }}
                 className="flex gap-10"
               >
                 <div
-                  className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${
-                    isAlert
+                  className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${isAlert
                       ? "border-red-300/20 bg-red-500/10"
                       : "border-cyan-200/10 bg-cyan-300/5"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`absolute inset-[20%] rounded-full blur-md transition-all duration-500 ${
-                      isAlert ? "bg-red-300/25" : "bg-cyan-200/20"
-                    }`}
+                    className={`absolute inset-[20%] rounded-full blur-md transition-all duration-500 ${isAlert ? "bg-red-300/25" : "bg-cyan-200/20"
+                      }`}
                   />
 
                   {isAwake && (
@@ -941,26 +931,23 @@ const logout = async () => {
                         x: { duration: 3, repeat: Infinity, ease: "easeInOut" },
                         scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
                       }}
-                      className={`relative h-6 w-6 rounded-full transition-all duration-500 ${
-                        isAlert
+                      className={`relative h-6 w-6 rounded-full transition-all duration-500 ${isAlert
                           ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
                           : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
-                      }`}
+                        }`}
                     />
                   )}
                 </div>
 
                 <div
-                  className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${
-                    isAlert
+                  className={`relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-full border backdrop-blur-md transition-all duration-500 ${isAlert
                       ? "border-red-300/20 bg-red-500/10"
                       : "border-cyan-200/10 bg-cyan-300/5"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`absolute inset-[20%] rounded-full blur-md transition-all duration-500 ${
-                      isAlert ? "bg-red-300/25" : "bg-cyan-200/20"
-                    }`}
+                    className={`absolute inset-[20%] rounded-full blur-md transition-all duration-500 ${isAlert ? "bg-red-300/25" : "bg-cyan-200/20"
+                      }`}
                   />
 
                   {isAwake && (
@@ -973,11 +960,10 @@ const logout = async () => {
                         x: { duration: 3, repeat: Infinity, ease: "easeInOut" },
                         scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
                       }}
-                      className={`relative h-6 w-6 rounded-full transition-all duration-500 ${
-                        isAlert
+                      className={`relative h-6 w-6 rounded-full transition-all duration-500 ${isAlert
                           ? "bg-gradient-to-br from-red-300 to-red-600 shadow-[0_0_30px_rgba(255,60,60,0.8)]"
                           : "bg-gradient-to-br from-white to-cyan-400 shadow-[0_0_25px_rgba(120,220,255,0.6)]"
-                      }`}
+                        }`}
                     />
                   )}
                 </div>
@@ -986,861 +972,858 @@ const logout = async () => {
           </motion.div>
         )}
       </AnimatePresence>
-{!session && (
-  <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#070707] px-6 text-white">
-    <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
-      <div className="text-4xl font-medium tracking-tight">
-        Velar<span className="text-red-600">.</span>
-      </div>
-
-      <p className="mt-3 text-white/55">
-        Sign in to access your voice-first AI workspace.
-      </p>
-
-      <div className="mt-8 space-y-4">
-        <input
-          type="email"
-          value={authEmail}
-          onChange={(e) => setAuthEmail(e.target.value)}
-          placeholder="Email"
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/35"
-        />
-
-        <input
-          type="password"
-          value={authPassword}
-          onChange={(e) => setAuthPassword(e.target.value)}
-          placeholder="Password"
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/35"
-        />
-
-        {authError && (
-          <p className="text-sm text-red-400">
-            {authError}
-          </p>
-        )}
-
-        <button
-          onClick={handleAuth}
-          disabled={authLoading}
-          className="w-full rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600 disabled:opacity-50"
-        >
-          {authLoading
-            ? "Please wait..."
-            : authMode === "login"
-            ? "Login"
-            : "Create Account"}
-        </button>
-      </div>
-
-      <button
-        onClick={() =>
-          setAuthMode(authMode === "login" ? "signup" : "login")
-        }
-        className="mt-6 text-sm text-white/55 transition hover:text-white"
-      >
-        {authMode === "login"
-          ? "New here? Create an account"
-          : "Already have an account? Login"}
-      </button>
-    </div>
-  </div>
-)}
-
-<AnimatePresence>
-  {showMainUI && (
-    <motion.div
-      key="main-ui"
-      initial={{ opacity: 0, scale: 0.08, borderRadius: "999px" }}
-      animate={{ opacity: 1, scale: 1, borderRadius: "0px" }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute inset-0 z-20 overflow-hidden text-white"
-    >
-      {/* MAIN UI BACKGROUND — matches intro theme */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.08),transparent_30%),linear-gradient(to_bottom,#090909,#111111)]" />
-
-      <div className="absolute inset-0 opacity-40">
-        <div className="absolute left-[8%] top-[10%] h-72 w-72 rounded-full bg-red-500/10 blur-3xl" />
-        <div className="absolute right-[10%] bottom-[12%] h-80 w-80 rounded-full bg-red-400/10 blur-3xl" />
-      </div>
-
-      {/* abstract flowing lines */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.28]">
-        <motion.svg
-          viewBox="0 0 1440 800"
-          className="absolute h-full w-full"
-          preserveAspectRatio="none"
-        >
-          <motion.path
-            d="M0,200 C300,300 600,100 900,200 C1200,300 1440,150 1440,150"
-            stroke="rgba(220,38,38,0.75)"
-            strokeWidth="1.2"
-            fill="transparent"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 3, ease: "easeInOut" }}
-          />
-
-          <motion.path
-            d="M0,400 C400,500 700,300 1000,420 C1200,480 1440,350 1440,350"
-            stroke="rgba(255,255,255,0.14)"
-            strokeWidth="1"
-            fill="transparent"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 3.5, ease: "easeInOut", delay: 0.4 }}
-          />
-
-          <motion.path
-            d="M0,600 C300,700 700,500 1000,620 C1300,700 1440,550 1440,550"
-            stroke="rgba(220,38,38,0.4)"
-            strokeWidth="1"
-            fill="transparent"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 4, ease: "easeInOut", delay: 0.8 }}
-          />
-        </motion.svg>
-
-        <motion.div
-          animate={{ x: ["-120%", "120%"] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-          className="pointer-events-none absolute inset-0 opacity-[0.08]"
-        >
-          <div className="h-full w-[25%] bg-gradient-to-r from-transparent via-red-500 to-transparent blur-2xl" />
-        </motion.div>
-      </div>
-
-      {/* wrapper for all visible UI */}
-      <div className="relative z-10 h-full w-full">
-        {/* top bar */}
-        <div className="fixed left-0 right-0 top-0 z-30 flex items-center justify-between border-b border-white/10 bg-black/25 px-10 py-5 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <div className="text-xl font-semibold tracking-tight text-white">
+      {!session && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#070707] px-6 text-white">
+          <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
+            <div className="text-4xl font-medium tracking-tight">
               Velar<span className="text-red-600">.</span>
             </div>
-          </div>
 
-          <div className="flex items-center gap-8 text-sm text-white/70">
-            <button
-              onClick={() => scrollToSection("hero")}
-              className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
-            >
-              Home
-            </button>
-
-            <button
-              onClick={() => scrollToSection("workflow")}
-              className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
-            >
-              Workflow
-            </button>
-
-            <button
-              onClick={() => scrollToSection("use-cases")}
-              className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
-            >
-              Use cases
-            </button>
-
-            <button
-              onClick={() => scrollToSection("credits")}
-              className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
-            >
-              Credits
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={voiceEnabled ? stopListening : startListening}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/75 backdrop-blur-md transition hover:border-white/25"
-            >
-              {voiceEnabled ? "Voice On" : "Enable Voice"}
-            </button>
-
-            <button
-              onClick={toggleFullscreen}
-              className="rounded-xl border border-red-500 bg-red-500 px-4 py-2 text-sm text-white transition hover:bg-red-600"
-            >
-              {isFullscreen ? "Exit" : "Fullscreen"}
-            </button>
-
-            <button
-  onClick={logout}
-  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/75 backdrop-blur-md transition hover:border-red-500/50 hover:text-white"
->
-  Logout
-</button>
-          </div>
-        </div>
-
-        {/* scrollable page */}
-  <div ref={mainScrollRef} className="h-full overflow-y-auto pt-24">
-          {/* hero */}
-          <section
-            id="hero"
-            className="mx-auto flex min-h-[78vh] w-full max-w-7xl flex-col items-center justify-center px-10 text-center"
-          >
-            <div className="mb-6 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-red-500 shadow-sm backdrop-blur-md">
-              Voice-first AI workspace
-            </div>
-
-            <h1 className="max-w-5xl text-6xl font-medium leading-[1.05] tracking-tight text-white md:text-7xl">
-              Velar, the AI workspace for chat, knowledge, tasks, and intelligent uploads
-            </h1>
-
-            <p className="mt-8 max-w-3xl text-xl leading-8 text-white/60">
-              Built as a premium operating layer for AI workflows. Clean interface,
-              clear modules, voice navigation, and a structure ready for real backend integration.
+            <p className="mt-3 text-white/55">
+              Sign in to access your voice-first AI workspace.
             </p>
 
-            <div className="mt-10 flex items-center gap-4">
-              <button
-                onClick={() => scrollToSection("use-cases")}
-                className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
-              >
-                Explore modules
-              </button>
+            <div className="mt-8 space-y-4">
+              <input
+                type="email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/35"
+              />
+
+              <input
+                type="password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none placeholder:text-white/35"
+              />
+
+              {authError && (
+                <p className="text-sm text-red-400">
+                  {authError}
+                </p>
+              )}
 
               <button
-                onClick={() => scrollToSection("credits")}
-                className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-white/80 backdrop-blur-md transition hover:border-white/30"
+                onClick={handleAuth}
+                disabled={authLoading}
+                className="w-full rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600 disabled:opacity-50"
               >
-                View credits
+                {authLoading
+                  ? "Please wait..."
+                  : authMode === "login"
+                    ? "Login"
+                    : "Create Account"}
               </button>
             </div>
-          </section>
 
-          <div className="my-12 h-[1px] w-full bg-white/10" />
+            <button
+              onClick={() =>
+                setAuthMode(authMode === "login" ? "signup" : "login")
+              }
+              className="mt-6 text-sm text-white/55 transition hover:text-white"
+            >
+              {authMode === "login"
+                ? "New here? Create an account"
+                : "Already have an account? Login"}
+            </button>
+          </div>
+        </div>
+      )}
 
-          {/* workflow */}
-          <section
-            id="workflow"
-            className="w-full border-b border-white/10 px-0 py-24"
+      <AnimatePresence>
+        {showMainUI && (
+          <motion.div
+            key="main-ui"
+            initial={{ opacity: 0, scale: 0.08, borderRadius: "999px" }}
+            animate={{ opacity: 1, scale: 1, borderRadius: "0px" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0 z-20 overflow-hidden text-white"
           >
-            <div className="mx-auto max-w-7xl px-10">
-              <div className="text-sm tracking-[0.22em] text-red-500">
-                • HOW VELAR WORKS
-              </div>
+            {/* MAIN UI BACKGROUND — matches intro theme */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.08),transparent_30%),linear-gradient(to_bottom,#090909,#111111)]" />
 
-              <h2 className="mt-6 text-6xl font-medium tracking-tight text-white">
-                One Workspace. <span className="text-red-500">Every Step.</span>
-              </h2>
-
-              <p className="mt-6 max-w-3xl text-2xl leading-9 text-white/60">
-                Velar brings everything together in a seamless flow from your thoughts
-                to real-world execution.
-              </p>
+            <div className="absolute inset-0 opacity-40">
+              <div className="absolute left-[8%] top-[10%] h-72 w-72 rounded-full bg-red-500/10 blur-3xl" />
+              <div className="absolute right-[10%] bottom-[12%] h-80 w-80 rounded-full bg-red-400/10 blur-3xl" />
             </div>
 
-            <div className="mx-auto mt-16 max-w-7xl px-10">
-              <div className="rounded-[36px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl">
-                <div className="relative mb-12 hidden md:block">
-                  <div className="absolute left-[9%] right-[4%] top-1/2 h-[1.5px] -translate-y-1/2 bg-red-400/70" />
+            {/* abstract flowing lines */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden opacity-[0.28]">
+              <motion.svg
+                viewBox="0 0 1440 800"
+                className="absolute h-full w-full"
+                preserveAspectRatio="none"
+              >
+                <motion.path
+                  d="M0,200 C300,300 600,100 900,200 C1200,300 1440,150 1440,150"
+                  stroke="rgba(220,38,38,0.75)"
+                  strokeWidth="1.2"
+                  fill="transparent"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 3, ease: "easeInOut" }}
+                />
 
-                  <div className="grid grid-cols-5 gap-8">
-                    {[
-                      {
-                        title: "Interact",
-                        desc: "Chat naturally with AI to get answers, ideas, and guidance.",
-                        icon: "💬",
-                      },
-                      {
-                        title: "Store",
-                        desc: "Important information is saved in your knowledge vault.",
-                        icon: "🗂️",
-                      },
-                      {
-                        title: "Organize",
-                        desc: "Structure your knowledge and create tasks, notes, and workflows.",
-                        icon: "◫",
-                      },
-                      {
-                        title: "Execute",
-                        desc: "Turn plans into action with focused tasks and tracking.",
-                        icon: "✓",
-                      },
-                      {
-                        title: "Upload",
-                        desc: "Add files and documents to bring everything into one place.",
-                        icon: "⤴",
-                      },
-                    ].map((step, index) => (
-                      <motion.div
-                        key={step.title}
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.25 }}
-                        transition={{ duration: 0.45, delay: index * 0.08 }}
-                        whileHover={{ y: -6 }}
-                        className="relative z-10 flex flex-col items-center text-center"
-                      >
-                        <motion.div
-                          whileHover={{ scale: 1.04 }}
-                          className="flex h-36 w-36 items-center justify-center rounded-full border border-white/10 bg-white/8 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-md"
-                        >
-                          <span className="text-5xl text-red-500">{step.icon}</span>
-                        </motion.div>
+                <motion.path
+                  d="M0,400 C400,500 700,300 1000,420 C1200,480 1440,350 1440,350"
+                  stroke="rgba(255,255,255,0.14)"
+                  strokeWidth="1"
+                  fill="transparent"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 3.5, ease: "easeInOut", delay: 0.4 }}
+                />
 
-                        <div className="mt-10 text-2xl font-medium tracking-tight text-white">
-                          <span className="mr-2 text-red-500">{index + 1}.</span>
-                          {step.title}
-                        </div>
+                <motion.path
+                  d="M0,600 C300,700 700,500 1000,620 C1300,700 1440,550 1440,550"
+                  stroke="rgba(220,38,38,0.4)"
+                  strokeWidth="1"
+                  fill="transparent"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 4, ease: "easeInOut", delay: 0.8 }}
+                />
+              </motion.svg>
 
-                        <p className="mt-5 max-w-[250px] text-lg leading-8 text-white/58">
-                          {step.desc}
-                        </p>
-                      </motion.div>
-                    ))}
+              <motion.div
+                animate={{ x: ["-120%", "120%"] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                className="pointer-events-none absolute inset-0 opacity-[0.08]"
+              >
+                <div className="h-full w-[25%] bg-gradient-to-r from-transparent via-red-500 to-transparent blur-2xl" />
+              </motion.div>
+            </div>
+
+            {/* wrapper for all visible UI */}
+            <div className="relative z-10 h-full w-full">
+              {/* top bar */}
+              <div className="fixed left-0 right-0 top-0 z-30 flex items-center justify-between border-b border-white/10 bg-black/25 px-10 py-5 backdrop-blur-md">
+                <div className="flex items-center gap-4">
+                  <div className="text-xl font-semibold tracking-tight text-white">
+                    Velar<span className="text-red-600">.</span>
                   </div>
                 </div>
 
-                <div className="space-y-8 md:hidden">
-                  {[
-                    {
-                      title: "Interact",
-                      desc: "Chat naturally with AI to get answers, ideas, and guidance.",
-                      icon: "💬",
-                    },
-                    {
-                      title: "Store",
-                      desc: "Important information is saved in your knowledge vault.",
-                      icon: "🗂️",
-                    },
-                    {
-                      title: "Organize",
-                      desc: "Structure your knowledge and create tasks, notes, and workflows.",
-                      icon: "◫",
-                    },
-                    {
-                      title: "Execute",
-                      desc: "Turn plans into action with focused tasks and tracking.",
-                      icon: "✓",
-                    },
-                    {
-                      title: "Upload",
-                      desc: "Add files and documents to bring everything into one place.",
-                      icon: "⤴",
-                    },
-                  ].map((step, index) => (
-                    <motion.div
-                      key={step.title}
-                      initial={{ opacity: 0, y: 24 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, amount: 0.2 }}
-                      transition={{ duration: 0.4, delay: index * 0.06 }}
-                      className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md"
+                <div className="flex items-center gap-8 text-sm text-white/70">
+                  <button
+                    onClick={() => scrollToSection("hero")}
+                    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
+                  >
+                    Home
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("workflow")}
+                    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
+                  >
+                    Workflow
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("use-cases")}
+                    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
+                  >
+                    Use cases
+                  </button>
+
+                  <button
+                    onClick={() => scrollToSection("credits")}
+                    className="border-b border-transparent pb-1 transition hover:border-red-500 hover:text-white"
+                  >
+                    Credits
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={voiceEnabled ? stopListening : startListening}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/75 backdrop-blur-md transition hover:border-white/25"
+                  >
+                    {voiceEnabled ? "Voice On" : "Enable Voice"}
+                  </button>
+
+                  <button
+                    onClick={toggleFullscreen}
+                    className="rounded-xl border border-red-500 bg-red-500 px-4 py-2 text-sm text-white transition hover:bg-red-600"
+                  >
+                    {isFullscreen ? "Exit" : "Fullscreen"}
+                  </button>
+
+                  <button
+                    onClick={logout}
+                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/75 backdrop-blur-md transition hover:border-red-500/50 hover:text-white"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+
+              {/* scrollable page */}
+              <div ref={mainScrollRef} className="h-full overflow-y-auto pt-24">
+                {/* hero */}
+                <section
+                  id="hero"
+                  className="mx-auto flex min-h-[78vh] w-full max-w-7xl flex-col items-center justify-center px-10 text-center"
+                >
+                  <div className="mb-6 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-red-500 shadow-sm backdrop-blur-md">
+                    Voice-first AI workspace
+                  </div>
+
+                  <h1 className="max-w-5xl text-6xl font-medium leading-[1.05] tracking-tight text-white md:text-7xl">
+                    Velar, the AI workspace for chat, knowledge, tasks, and intelligent uploads
+                  </h1>
+
+                  <p className="mt-8 max-w-3xl text-xl leading-8 text-white/60">
+                    Built as a premium operating layer for AI workflows. Clean interface,
+                    clear modules, voice navigation, and a structure ready for real backend integration.
+                  </p>
+
+                  <div className="mt-10 flex items-center gap-4">
+                    <button
+                      onClick={() => scrollToSection("use-cases")}
+                      className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/8 text-2xl text-red-500">
-                          {step.icon}
-                        </div>
-                        <div className="text-2xl font-medium tracking-tight text-white">
-                          <span className="mr-2 text-red-500">{index + 1}.</span>
-                          {step.title}
+                      Explore modules
+                    </button>
+
+                    <button
+                      onClick={() => scrollToSection("credits")}
+                      className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-white/80 backdrop-blur-md transition hover:border-white/30"
+                    >
+                      View credits
+                    </button>
+                  </div>
+                </section>
+
+                <div className="my-12 h-[1px] w-full bg-white/10" />
+
+                {/* workflow */}
+                <section
+                  id="workflow"
+                  className="w-full border-b border-white/10 px-0 py-24"
+                >
+                  <div className="mx-auto max-w-7xl px-10">
+                    <div className="text-sm tracking-[0.22em] text-red-500">
+                      • HOW VELAR WORKS
+                    </div>
+
+                    <h2 className="mt-6 text-6xl font-medium tracking-tight text-white">
+                      One Workspace. <span className="text-red-500">Every Step.</span>
+                    </h2>
+
+                    <p className="mt-6 max-w-3xl text-2xl leading-9 text-white/60">
+                      Velar brings everything together in a seamless flow from your thoughts
+                      to real-world execution.
+                    </p>
+                  </div>
+
+                  <div className="mx-auto mt-16 max-w-7xl px-10">
+                    <div className="rounded-[36px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl">
+                      <div className="relative mb-12 hidden md:block">
+                        <div className="absolute left-[9%] right-[4%] top-1/2 h-[1.5px] -translate-y-1/2 bg-red-400/70" />
+
+                        <div className="grid grid-cols-5 gap-8">
+                          {[
+                            {
+                              title: "Interact",
+                              desc: "Chat naturally with AI to get answers, ideas, and guidance.",
+                              icon: "💬",
+                            },
+                            {
+                              title: "Store",
+                              desc: "Important information is saved in your knowledge vault.",
+                              icon: "🗂️",
+                            },
+                            {
+                              title: "Organize",
+                              desc: "Structure your knowledge and create tasks, notes, and workflows.",
+                              icon: "◫",
+                            },
+                            {
+                              title: "Execute",
+                              desc: "Turn plans into action with focused tasks and tracking.",
+                              icon: "✓",
+                            },
+                            {
+                              title: "Upload",
+                              desc: "Add files and documents to bring everything into one place.",
+                              icon: "⤴",
+                            },
+                          ].map((step, index) => (
+                            <motion.div
+                              key={step.title}
+                              initial={{ opacity: 0, y: 30 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true, amount: 0.25 }}
+                              transition={{ duration: 0.45, delay: index * 0.08 }}
+                              whileHover={{ y: -6 }}
+                              className="relative z-10 flex flex-col items-center text-center"
+                            >
+                              <motion.div
+                                whileHover={{ scale: 1.04 }}
+                                className="flex h-36 w-36 items-center justify-center rounded-full border border-white/10 bg-white/8 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-md"
+                              >
+                                <span className="text-5xl text-red-500">{step.icon}</span>
+                              </motion.div>
+
+                              <div className="mt-10 text-2xl font-medium tracking-tight text-white">
+                                <span className="mr-2 text-red-500">{index + 1}.</span>
+                                {step.title}
+                              </div>
+
+                              <p className="mt-5 max-w-[250px] text-lg leading-8 text-white/58">
+                                {step.desc}
+                              </p>
+                            </motion.div>
+                          ))}
                         </div>
                       </div>
 
-                      <p className="mt-4 text-lg leading-8 text-white/58">
-                        {step.desc}
-                      </p>
-                    </motion.div>
-                  ))}
-                </div>
+                      <div className="space-y-8 md:hidden">
+                        {[
+                          {
+                            title: "Interact",
+                            desc: "Chat naturally with AI to get answers, ideas, and guidance.",
+                            icon: "💬",
+                          },
+                          {
+                            title: "Store",
+                            desc: "Important information is saved in your knowledge vault.",
+                            icon: "🗂️",
+                          },
+                          {
+                            title: "Organize",
+                            desc: "Structure your knowledge and create tasks, notes, and workflows.",
+                            icon: "◫",
+                          },
+                          {
+                            title: "Execute",
+                            desc: "Turn plans into action with focused tasks and tracking.",
+                            icon: "✓",
+                          },
+                          {
+                            title: "Upload",
+                            desc: "Add files and documents to bring everything into one place.",
+                            icon: "⤴",
+                          },
+                        ].map((step, index) => (
+                          <motion.div
+                            key={step.title}
+                            initial={{ opacity: 0, y: 24 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, amount: 0.2 }}
+                            transition={{ duration: 0.4, delay: index * 0.06 }}
+                            className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/8 text-2xl text-red-500">
+                                {step.icon}
+                              </div>
+                              <div className="text-2xl font-medium tracking-tight text-white">
+                                <span className="mr-2 text-red-500">{index + 1}.</span>
+                                {step.title}
+                              </div>
+                            </div>
 
-                <div className="relative mt-12 hidden md:block">
-                  <div className="mx-auto h-[1.5px] w-[82%] bg-red-400/50" />
-                  <div className="mt-6 flex justify-center">
-                    <div className="rounded-full border border-white/10 bg-white/5 px-8 py-3 text-xl text-red-500 shadow-sm backdrop-blur-md">
-                      Continuous Flow
+                            <p className="mt-4 text-lg leading-8 text-white/58">
+                              {step.desc}
+                            </p>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      <div className="relative mt-12 hidden md:block">
+                        <div className="mx-auto h-[1.5px] w-[82%] bg-red-400/50" />
+                        <div className="mt-6 flex justify-center">
+                          <div className="rounded-full border border-white/10 bg-white/5 px-8 py-3 text-xl text-red-500 shadow-sm backdrop-blur-md">
+                            Continuous Flow
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </section>
+
+                {/* use cases / MVPs */}
+                <section
+                  id="use-cases"
+                  className="mx-auto w-full max-w-7xl px-10 py-24"
+                >
+                  <h2 className="text-6xl font-medium tracking-tight text-white">
+                    Use cases
+                  </h2>
+
+                  <p className="mt-6 max-w-3xl text-2xl leading-9 text-white/60">
+                    Use Velar to interact with AI, store knowledge, manage workflows,
+                    and handle uploads through a clean system designed for real product use.
+                  </p>
+
+                  <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {/* AI CHAT CARD */}
+                    <motion.div
+                      id="ai-chat"
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.25 }}
+                      transition={{ duration: 0.55, ease: "easeOut" }}
+                      whileHover={{ y: -8, scale: 1.01 }}
+                      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-4xl font-medium tracking-tight text-white">
+                          AI Chat
+                        </h3>
+
+                        <div className="flex gap-3">
+                          <button
+                            onClick={startNewChat}
+                            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+                          >
+                            New Chat
+                          </button>
+
+                          <button
+                            onClick={clearChat}
+                            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+                          >
+                            Clear
+                          </button>
+
+                          <button
+                            onClick={() => setIsChatExpanded(true)}
+                            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+                          >
+                            Expand
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-8 h-72 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-6">
+                        {chatMessages.map((msg, index) => (
+                          <div
+                            key={index}
+                            className={`rounded-2xl px-4 py-3 text-sm leading-7 ${msg.role === "user"
+                                ? "ml-auto max-w-[80%] bg-red-500 text-white"
+                                : "max-w-[85%] bg-white/10 text-white"
+                              }`}
+                          >
+                            <div>{msg.content}</div>
+
+                            {msg.role === "assistant" && (
+                              <button
+                                onClick={() => saveChatToVault(msg.content)}
+                                className="mt-3 text-xs text-red-300 transition hover:text-red-200"
+                              >
+                                Save to Vault
+                              </button>
+                            )}
+                          </div>
+                        ))}
+
+                        {loadingChat && (
+                          <div className="text-sm text-white/50">
+                            Velar thinking...
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-6 flex gap-3">
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") sendMessage();
+                          }}
+                          placeholder="Ask Velar anything..."
+                          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+                        />
+
+                        <button
+                          onClick={sendMessage}
+                          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </motion.div>
+
+                    {/* KNOWLEDGE VAULT CARD */}
+                    <motion.div
+                      id="knowledge"
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.25 }}
+                      transition={{ duration: 0.55, delay: 0.06, ease: "easeOut" }}
+                      whileHover={{ y: -8, scale: 1.01 }}
+                      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+                    >
+                      <h3 className="text-4xl font-medium tracking-tight text-white">
+                        Knowledge Vault
+                      </h3>
+
+                      <div className="mt-8 space-y-4">
+                        <input
+                          value={noteTitle}
+                          onChange={(e) => setNoteTitle(e.target.value)}
+                          placeholder="Note title"
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+                        />
+
+                        <textarea
+                          value={noteContent}
+                          onChange={(e) => setNoteContent(e.target.value)}
+                          rows={4}
+                          placeholder="Write knowledge note..."
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+                        />
+
+                        <button
+                          onClick={saveNote}
+                          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+                        >
+                          Save Note
+                        </button>
+                      </div>
+
+                      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+                        {notes.map((note) => (
+                          <div
+                            key={note.id}
+                            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                          >
+                            <div className="flex justify-between gap-4">
+                              <h4 className="text-white">{note.title}</h4>
+
+                              <button
+                                onClick={() => deleteNote(note.id)}
+                                className="text-sm text-red-400 transition hover:text-red-300"
+                              >
+                                Delete
+                              </button>
+                            </div>
+
+                            <p className="mt-3 text-white/60">{note.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+
+                    {/* TASKS CARD */}
+                    <motion.div
+                      id="tasks"
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.25 }}
+                      transition={{ duration: 0.55, delay: 0.12, ease: "easeOut" }}
+                      whileHover={{ y: -8, scale: 1.01 }}
+                      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+                    >
+                      <h3 className="text-4xl font-medium tracking-tight text-white">
+                        Tasks
+                      </h3>
+
+                      <div className="mt-8 space-y-4">
+                        <input
+                          value={taskTitle}
+                          onChange={(e) => setTaskTitle(e.target.value)}
+                          placeholder="Task title"
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
+                        />
+
+                        <select
+                          value={taskPriority}
+                          onChange={(e) => setTaskPriority(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                        >
+                          <option value="low">Low priority</option>
+                          <option value="medium">Medium priority</option>
+                          <option value="high">High priority</option>
+                        </select>
+
+                        <button
+                          onClick={saveTask}
+                          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+                        >
+                          Add Task
+                        </button>
+                      </div>
+
+                      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+                        {tasksLoading && <p className="text-white/50">Loading tasks...</p>}
+
+                        {tasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <h4
+                                  className={`text-white ${task.status === "done" ? "line-through opacity-50" : ""
+                                    }`}
+                                >
+                                  {task.title}
+                                </h4>
+
+                                <p className="mt-2 text-sm text-white/45">
+                                  {task.priority} priority • {task.status}
+                                </p>
+                              </div>
+
+                              <div className="flex gap-3">
+                                <button
+                                  onClick={() => toggleTaskStatus(task)}
+                                  className="text-sm text-red-400 transition hover:text-red-300"
+                                >
+                                  {task.status === "done" ? "Undo" : "Done"}
+                                </button>
+
+                                <button
+                                  onClick={() => deleteTask(task.id)}
+                                  className="text-sm text-white/40 transition hover:text-red-300"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+
+                    {/* UPLOADS CARD */}
+                    <motion.div
+                      id="uploads"
+                      initial={{ opacity: 0, y: 40 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.25 }}
+                      transition={{ duration: 0.55, delay: 0.18, ease: "easeOut" }}
+                      whileHover={{ y: -8, scale: 1.01 }}
+                      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
+                    >
+                      <h3 className="text-4xl font-medium tracking-tight text-white">
+                        Uploads
+                      </h3>
+
+                      <div className="mt-8 space-y-4">
+                        <input
+                          type="file"
+                          onChange={(e) => setSelectedFile(e.target.files[0])}
+                          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-red-500 file:px-4 file:py-2 file:text-white"
+                        />
+
+                        <button
+                          onClick={uploadFile}
+                          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
+                        >
+                          {uploadingFile ? "Uploading..." : "Upload File"}
+                        </button>
+                      </div>
+
+                      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
+                        {uploadedFiles.length === 0 ? (
+                          <p className="text-white/45">No files uploaded yet.</p>
+                        ) : (
+                          uploadedFiles.map((file) => (
+                            <div
+                              key={file.name}
+                              className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div>
+                                  <h4 className="break-all text-white">{file.name}</h4>
+                                  <p className="mt-2 text-sm text-white/45">Uploaded file</p>
+                                </div>
+
+                                <button
+                                  onClick={() => deleteUpload(file.name)}
+                                  className="text-sm text-red-400 transition hover:text-red-300"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </motion.div>
+                  </div>
+                </section>
+
+                {/* Credits */}
+                <section
+                  id="credits"
+                  className="mx-auto w-full max-w-7xl border-t border-white/10 px-10 py-24"
+                >
+                  <h2 className="text-5xl font-medium tracking-tight text-white">
+                    Credits
+                  </h2>
+
+                  <p className="mt-8 max-w-3xl text-2xl leading-9 text-white/60">
+                    Built by Punit Bhargava. A developer focused on building clean,
+                    scalable systems at the intersection of AI and full-stack development.
+                    Velar is designed as a structured workspace that goes beyond UI,
+                    aiming to evolve into a real-world intelligent system.
+                  </p>
+
+                  <div className="mt-12 flex flex-col gap-4 text-lg">
+                    <a
+                      href="https://www.linkedin.com/in/punit-bhargava-487321311/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white/75 transition hover:text-red-500"
+                    >
+                      LinkedIn
+                    </a>
+
+                    <a
+                      href="https://github.com/Punitcodes-16"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white/75 transition hover:text-red-500"
+                    >
+                      GitHub
+                    </a>
+                  </div>
+                </section>
               </div>
+              <AnimatePresence>
+                {isChatExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-8 backdrop-blur-md"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.92, y: 30 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.92, y: 30 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex h-[82vh] w-full max-w-5xl flex-col rounded-[32px] border border-white/10 bg-[#101010]/95 p-8 shadow-[0_30px_100px_rgba(0,0,0,0.45)]"
+                    >
+                      <div className="flex h-full gap-6">
+                        {/* SAVED CHATS SIDEBAR */}
+                        <aside className="w-64 rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <button
+                            onClick={startNewChat}
+                            className="mb-4 w-full rounded-xl bg-red-500 px-4 py-3 text-sm text-white transition hover:bg-red-600"
+                          >
+                            + New Chat
+                          </button>
+
+                          <div className="space-y-2">
+                            {savedChats.length === 0 ? (
+                              <div className="rounded-xl border border-white/10 px-3 py-3 text-sm text-white/40">
+                                No saved chats yet
+                              </div>
+                            ) : (
+                              savedChats.map((chat) => (
+                                <div
+                                  key={chat.id}
+                                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                                >
+                                  <button
+                                    onClick={() => loadSavedChat(chat)}
+                                    className="flex-1 text-left text-sm text-white/70 transition hover:text-white"
+                                  >
+                                    {chat.title}
+                                  </button>
+
+                                  <button
+                                    onClick={() => deleteSavedChat(chat.id)}
+                                    className="text-xs text-white/35 transition hover:text-red-400"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </aside>
+
+                        {/* CHAT AREA */}
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <div className="flex items-center justify-between border-b border-white/10 pb-5">
+                            <div>
+                              <h2 className="text-3xl font-medium text-white">
+                                AI Chat
+                              </h2>
+                              <p className="mt-1 text-sm text-white/45">
+                                Expanded Velar conversation workspace
+                              </p>
+                            </div>
+
+                            <div className="flex gap-3">
+                              <button
+                                onClick={clearChat}
+                                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+                              >
+                                Clear
+                              </button>
+
+                              <button
+                                onClick={() => setIsChatExpanded(false)}
+                                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
+                              >
+                                Minimize
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-6 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-6">
+                            {chatMessages.map((msg, index) => (
+                              <div
+                                key={index}
+                                className={`rounded-2xl px-5 py-4 text-base leading-8 ${msg.role === "user"
+                                    ? "ml-auto max-w-[70%] bg-red-500 text-white"
+                                    : "max-w-[75%] bg-white/10 text-white"
+                                  }`}
+                              >
+                                {msg.content}
+                              </div>
+                            ))}
+
+                            {loadingChat && (
+                              <div className="text-white/50">
+                                Velar thinking...
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="mt-6 flex gap-3">
+                            <input
+                              value={chatInput}
+                              onChange={(e) => setChatInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") sendMessage();
+                              }}
+                              placeholder="Ask Velar anything..."
+                              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white outline-none placeholder:text-white/35"
+                            />
+
+                            <button
+                              onClick={sendMessage}
+                              className="rounded-xl bg-red-500 px-6 py-4 text-white transition hover:bg-red-600"
+                            >
+                              Send
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </section>
 
-    {/* use cases / MVPs */}
-<section
-  id="use-cases"
-  className="mx-auto w-full max-w-7xl px-10 py-24"
->
-  <h2 className="text-6xl font-medium tracking-tight text-white">
-    Use cases
-  </h2>
-
-  <p className="mt-6 max-w-3xl text-2xl leading-9 text-white/60">
-    Use Velar to interact with AI, store knowledge, manage workflows,
-    and handle uploads through a clean system designed for real product use.
-  </p>
-
-  <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
-    {/* AI CHAT CARD */}
-    <motion.div
-      id="ai-chat"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.55, ease: "easeOut" }}
-      whileHover={{ y: -8, scale: 1.01 }}
-      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-4xl font-medium tracking-tight text-white">
-          AI Chat
-        </h3>
-
-        <div className="flex gap-3">
-          <button
-            onClick={startNewChat}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-          >
-            New Chat
-          </button>
-
-          <button
-            onClick={clearChat}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-          >
-            Clear
-          </button>
-
-          <button
-            onClick={() => setIsChatExpanded(true)}
-            className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-          >
-            Expand
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-8 h-72 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/20 p-6">
-        {chatMessages.map((msg, index) => (
-          <div
-            key={index}
-            className={`rounded-2xl px-4 py-3 text-sm leading-7 ${
-              msg.role === "user"
-                ? "ml-auto max-w-[80%] bg-red-500 text-white"
-                : "max-w-[85%] bg-white/10 text-white"
-            }`}
-          >
-            <div>{msg.content}</div>
-
-            {msg.role === "assistant" && (
-              <button
-                onClick={() => saveChatToVault(msg.content)}
-                className="mt-3 text-xs text-red-300 transition hover:text-red-200"
-              >
-                Save to Vault
-              </button>
-            )}
-          </div>
-        ))}
-
-        {loadingChat && (
-          <div className="text-sm text-white/50">
-            Velar thinking...
-          </div>
+          </motion.div>
         )}
-      </div>
-
-      <div className="mt-6 flex gap-3">
-        <input
-          value={chatInput}
-          onChange={(e) => setChatInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") sendMessage();
-          }}
-          placeholder="Ask Velar anything..."
-          className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-        />
-
-        <button
-          onClick={sendMessage}
-          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
-        >
-          Send
-        </button>
-      </div>
-    </motion.div>
-
-    {/* KNOWLEDGE VAULT CARD */}
-    <motion.div
-      id="knowledge"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.55, delay: 0.06, ease: "easeOut" }}
-      whileHover={{ y: -8, scale: 1.01 }}
-      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-    >
-      <h3 className="text-4xl font-medium tracking-tight text-white">
-        Knowledge Vault
-      </h3>
-
-      <div className="mt-8 space-y-4">
-        <input
-          value={noteTitle}
-          onChange={(e) => setNoteTitle(e.target.value)}
-          placeholder="Note title"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-        />
-
-        <textarea
-          value={noteContent}
-          onChange={(e) => setNoteContent(e.target.value)}
-          rows={4}
-          placeholder="Write knowledge note..."
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-        />
-
-        <button
-          onClick={saveNote}
-          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
-        >
-          Save Note
-        </button>
-      </div>
-
-      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
-        {notes.map((note) => (
-          <div
-            key={note.id}
-            className="rounded-2xl border border-white/10 bg-black/20 p-4"
-          >
-            <div className="flex justify-between gap-4">
-              <h4 className="text-white">{note.title}</h4>
-
-              <button
-                onClick={() => deleteNote(note.id)}
-                className="text-sm text-red-400 transition hover:text-red-300"
-              >
-                Delete
-              </button>
-            </div>
-
-            <p className="mt-3 text-white/60">{note.content}</p>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-
-    {/* TASKS CARD */}
-    <motion.div
-      id="tasks"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.55, delay: 0.12, ease: "easeOut" }}
-      whileHover={{ y: -8, scale: 1.01 }}
-      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-    >
-      <h3 className="text-4xl font-medium tracking-tight text-white">
-        Tasks
-      </h3>
-
-      <div className="mt-8 space-y-4">
-        <input
-          value={taskTitle}
-          onChange={(e) => setTaskTitle(e.target.value)}
-          placeholder="Task title"
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/35"
-        />
-
-        <select
-          value={taskPriority}
-          onChange={(e) => setTaskPriority(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-        >
-          <option value="low">Low priority</option>
-          <option value="medium">Medium priority</option>
-          <option value="high">High priority</option>
-        </select>
-
-        <button
-          onClick={saveTask}
-          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
-        >
-          Add Task
-        </button>
-      </div>
-
-      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
-        {tasksLoading && <p className="text-white/50">Loading tasks...</p>}
-
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            className="rounded-2xl border border-white/10 bg-black/20 p-4"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h4
-                  className={`text-white ${
-                    task.status === "done" ? "line-through opacity-50" : ""
-                  }`}
-                >
-                  {task.title}
-                </h4>
-
-                <p className="mt-2 text-sm text-white/45">
-                  {task.priority} priority • {task.status}
-                </p>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => toggleTaskStatus(task)}
-                  className="text-sm text-red-400 transition hover:text-red-300"
-                >
-                  {task.status === "done" ? "Undo" : "Done"}
-                </button>
-
-                <button
-                  onClick={() => deleteTask(task.id)}
-                  className="text-sm text-white/40 transition hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
-
-    {/* UPLOADS CARD */}
-    <motion.div
-      id="uploads"
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.55, delay: 0.18, ease: "easeOut" }}
-      whileHover={{ y: -8, scale: 1.01 }}
-      className="min-h-[520px] rounded-[28px] border border-white/10 bg-white/5 p-10 shadow-sm backdrop-blur-xl transition"
-    >
-      <h3 className="text-4xl font-medium tracking-tight text-white">
-        Uploads
-      </h3>
-
-      <div className="mt-8 space-y-4">
-        <input
-          type="file"
-          onChange={(e) => setSelectedFile(e.target.files[0])}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white file:mr-4 file:rounded-lg file:border-0 file:bg-red-500 file:px-4 file:py-2 file:text-white"
-        />
-
-        <button
-          onClick={uploadFile}
-          className="rounded-xl bg-red-500 px-5 py-3 text-white transition hover:bg-red-600"
-        >
-          {uploadingFile ? "Uploading..." : "Upload File"}
-        </button>
-      </div>
-
-      <div className="mt-8 max-h-64 space-y-4 overflow-y-auto">
-        {uploadedFiles.length === 0 ? (
-          <p className="text-white/45">No files uploaded yet.</p>
-        ) : (
-          uploadedFiles.map((file) => (
-            <div
-              key={file.name}
-              className="rounded-2xl border border-white/10 bg-black/20 p-4"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h4 className="break-all text-white">{file.name}</h4>
-                  <p className="mt-2 text-sm text-white/45">Uploaded file</p>
-                </div>
-
-                <button
-                  onClick={() => deleteUpload(file.name)}
-                  className="text-sm text-red-400 transition hover:text-red-300"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </motion.div>
-  </div>
-</section>
-
-          {/* Credits */}
-          <section
-            id="credits"
-            className="mx-auto w-full max-w-7xl border-t border-white/10 px-10 py-24"
-          >
-            <h2 className="text-5xl font-medium tracking-tight text-white">
-              Credits
-            </h2>
-
-            <p className="mt-8 max-w-3xl text-2xl leading-9 text-white/60">
-              Built by Punit Bhargava. A developer focused on building clean,
-              scalable systems at the intersection of AI and full-stack development.
-              Velar is designed as a structured workspace that goes beyond UI,
-              aiming to evolve into a real-world intelligent system.
-            </p>
-
-            <div className="mt-12 flex flex-col gap-4 text-lg">
-              <a
-                href="https://www.linkedin.com/in/punit-bhargava-487321311/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white/75 transition hover:text-red-500"
-              >
-                LinkedIn
-              </a>
-
-              <a
-                href="https://github.com/Punitcodes-16"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white/75 transition hover:text-red-500"
-              >
-                GitHub
-              </a>
-            </div>
-          </section>
-        </div>
-        <AnimatePresence>
-  {isChatExpanded && (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-8 backdrop-blur-md"
-    >
-      <motion.div
-        initial={{ scale: 0.92, y: 30 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 30 }}
-        transition={{ duration: 0.3 }}
-        className="flex h-[82vh] w-full max-w-5xl flex-col rounded-[32px] border border-white/10 bg-[#101010]/95 p-8 shadow-[0_30px_100px_rgba(0,0,0,0.45)]"
-      >
-        <div className="flex h-full gap-6">
-  {/* SAVED CHATS SIDEBAR */}
-  <aside className="w-64 rounded-2xl border border-white/10 bg-white/5 p-4">
-    <button
-      onClick={startNewChat}
-      className="mb-4 w-full rounded-xl bg-red-500 px-4 py-3 text-sm text-white transition hover:bg-red-600"
-    >
-      + New Chat
-    </button>
-
-    <div className="space-y-2">
-      {savedChats.length === 0 ? (
-        <div className="rounded-xl border border-white/10 px-3 py-3 text-sm text-white/40">
-          No saved chats yet
-        </div>
-      ) : (
-       savedChats.map((chat) => (
-  <div
-    key={chat.id}
-    className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-  >
-    <button
-      onClick={() => loadSavedChat(chat)}
-      className="flex-1 text-left text-sm text-white/70 transition hover:text-white"
-    >
-      {chat.title}
-    </button>
-
-    <button
-      onClick={() => deleteSavedChat(chat.id)}
-      className="text-xs text-white/35 transition hover:text-red-400"
-    >
-      ✕
-    </button>
-  </div>
-))
-      )}
-    </div>
-  </aside>
-
-  {/* CHAT AREA */}
-  <div className="flex min-w-0 flex-1 flex-col">
-    <div className="flex items-center justify-between border-b border-white/10 pb-5">
-      <div>
-        <h2 className="text-3xl font-medium text-white">
-          AI Chat
-        </h2>
-        <p className="mt-1 text-sm text-white/45">
-          Expanded Velar conversation workspace
-        </p>
-      </div>
-
-      <div className="flex gap-3">
-        <button
-          onClick={clearChat}
-          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-        >
-          Clear
-        </button>
-
-        <button
-          onClick={() => setIsChatExpanded(false)}
-          className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/50 hover:text-white"
-        >
-          Minimize
-        </button>
-      </div>
-    </div>
-
-    <div className="mt-6 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-white/10 bg-black/25 p-6">
-      {chatMessages.map((msg, index) => (
-        <div
-          key={index}
-          className={`rounded-2xl px-5 py-4 text-base leading-8 ${
-            msg.role === "user"
-              ? "ml-auto max-w-[70%] bg-red-500 text-white"
-              : "max-w-[75%] bg-white/10 text-white"
-          }`}
-        >
-          {msg.content}
-        </div>
-      ))}
-
-      {loadingChat && (
-        <div className="text-white/50">
-          Velar thinking...
-        </div>
-      )}
-    </div>
-
-    <div className="mt-6 flex gap-3">
-      <input
-        value={chatInput}
-        onChange={(e) => setChatInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") sendMessage();
-        }}
-        placeholder="Ask Velar anything..."
-        className="flex-1 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-white outline-none placeholder:text-white/35"
-      />
-
-      <button
-        onClick={sendMessage}
-        className="rounded-xl bg-red-500 px-6 py-4 text-white transition hover:bg-red-600"
-      >
-        Send
-      </button>
-    </div>
-  </div>
-</div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
-      </div>
-      
-    </motion.div>
-  )}
-</AnimatePresence>
+      </AnimatePresence>
     </div>
   );
 }
