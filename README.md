@@ -137,13 +137,7 @@ into one intelligent workspace.
 
 ## 🌍 Live Demo
 
-Frontend: *(Add Vercel Link)*  
-Backend: *(Add Render Link)*
-
----
-
-## 📸 Screenshots
-(Add screenshots here)
+https://velar-rust.vercel.app/
 
 ---
 
