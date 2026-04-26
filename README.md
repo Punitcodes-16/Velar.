@@ -135,12 +135,6 @@ into one intelligent workspace.
 
 ---
 
-## 🌍 Live Demo
-
-https://velar-rust.vercel.app/
-
----
-
 ## 💡 One-Line Pitch
 
 **Velar is a voice-first AI operating workspace combining chat, memory, tasks and documents into one intelligent productivity system.**
