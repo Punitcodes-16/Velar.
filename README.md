@@ -19,7 +19,7 @@ Velar is designed as an **AI Operating Workspace** where users can:
 - Build toward intelligent agent-driven workflows
 
 ---
-## live link : https://velar-rust.vercel.app/
+## live link : Not live at the moment
 ## 🌌 Features
 
 ### 🤖 AI Chat
